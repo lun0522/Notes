@@ -1,0 +1,46 @@
+#Learn C++
+
+1. use `static_cast<float>(3)` rather than `float(3)`
+- `enum class Color {...}`, then `Color color = Color::RED`; rather than `enum Color {...}`, then `Color color = COLOR_RED`. in this way enumerations are regarding as of "class" `Color`, so we cannot do `color = 2` i.e. regard it as an int value any more
+- if enums are used as array indices, we have to use `colors[static_cast<int>(Color::COLOR_RED)]` since they are not regarded as int values; in that case, we would rather use the traditional way: `namespace {enum Color {…}; }`, and then `colors[Color::COLOR_RED]`
+- `if (std::cin.fail()) { std::cin.clear(); std::cin.ignore(32767,'\n');`
+- `int *ptr = new int (5); delete ptr; ptr = nullptr;` operator `new` dynamically allocates a space, and returns the address of it. however `new` can fail and throw an exception; we can use `nt *ptr = new (std::nothrow) int (5);` instead, then a failed `new` will only causes `ptr` to be `nullptr` (**no** need to say `if (ptr) delete ptr;`)
+- for array: `int *array = new int[3] {1, 2, 3}; delete[] array; array = nullptr;`. note that the length needn't be known at compile time, but it cannot be omitted
+- use reference: `int &ref = other.something.value1; ref = 5;`
+- `std::array<int, 5> myarray = { 9, 7, 5, 3, 1 };`, the length cannot be omitted; `myarray.size()` to get length; `at()` will check whether the index is valid, `myarray.at(9) = 10;` will throw an exception
+- always pass `std::array` by reference or const reference, to prevent the compiler from making a copy of the array when the array was passed to the function;
+- `std::sort(myarray.begin(), myarray.end());`
+- no need to `delete` a `std::array`
+- `std::vector<int> array { 9, 7, 5, 3, 1 };` no need to include the length; `array = { 9, 8, 7 };` will make the length 3, rather than 5 with two 0 at the end; `array.resize(5);` will resize it, make the length 5, and append two 0 at the end; but resizing is expensive
+- `std::vector` has two attributes: `length` and `capacity` (`.length()` <= `.capacity()`). `capacity` keeps track of how much memory is allocated, while `length` keeps track of how much memory is actually used; `std::vector` will reallocate memory only when the current allocated memory is **not enough**, eg: `std::vector<int> array = { 9, 8, 7 };` (l = c = 3); `array.resize(5);` (reallocate, l = c = 5); `array = { 1, 2, 3 }` (does not reallocate, l = 3 while c = 5)
+- `std::vector` can be used as a stack: `push_back()` pushes an element on the stack, `back()` returns the value of the top element on the stack (without poping), and `pop_back()` pops an element off the stack; since reallocation is expensive, we'd better use `reserve()` to pre-reserve some room for future use, eg: `array.reserve(5)` will set the capacity to (at least) 5
+- no need to `delete` a `std::vector`
+- do not return a pointer or reference of a variable that is only valid inside the scope of function
+- `int& returnByReference()`, then `int &ref = returnByValue();` is invalid, but `const int &cref = returnByValue();` is valid since const references can bind to r-values (lifetime extended)
+- inline functions can be implemented in header files, since they are like `# define`
+- `int add(int x, int y);`, `const int add(int x, int y);`, `double add(double x, double y);` and `int add(int x, int y, int z)` can coexist, but `double add(int x, int y);` cannot, because return types are not considered for uniqueness; an ambiguous match will cause an exception, so we may use `add(static_cast<int>(a), static_cast<int>(b));` to force it to exactly match one of options
+- all default parameters of a function must be the rightmost parameters
+- default parameters can only be declared once, so we should use `void printValues(int x, int y=10);` in `.hpp` and `void printValues(int x, int y) {...}` in `.cpp`
+- `void printValues(int x);` and `void printValues(int x, int y=20);` will cause an ambiguous match if we only pass `x`, so it is not allowed
+- default parameters won’t work for functions called through function pointers
+- `typedef bool (*validateFcn)(int, int);` is the same to `using validateFcn = bool(*)(int, int);` or `std::function<bool(int, int)> validateFcn;`
+- `std::cerr << "function printString() received a null parameter";`
+- `#include <cstdlib>` then `exit(2);`
+- `#include <cassert>` then `assert(found && "Car could not be found in database");` to provide a description string; use `#define NDEBUG` to avoid that `assert()` appears in the production mode
+- `static_assert()` is operated in compile time rather than runtime, so it is used to check something that can be known at compile time, eg: `static_assert(sizeof(int) == 4, "int must be 4 bytes");`
+- use `int main(int argc, char *argv[])` (or `int main(int argc, char** argv)`) to take in parameters from command line, `argc` (argument count) tells the length of `*argv[]`, and each item of `*argv[]` is a string
+- class members are **private** by default; note that public methods can access to private members as well, even if that member is of a different instance
+- a constructor of a class should meet two requirements: should always have the same name as the class; have no return type (not even void). eg: for class `Fraction` which has two members: `m_numerator` and `m_denominator`, it can have constructors `Fraction() {...}` and `Fraction(int numerator, int denominator=1) {...}`; or more concisely, `Fraction(int numerator=0, int denominator=1) { m_numerator = numerator; m_denominator = denominator }`, which handles the default situation as well
+- in the previous example, if members `m_numerator` and `m_denominator` are of type `const`, we cannot assign values to them in the constructors. instead, we can use a initializer list: `Fraction(int numerator=0, int denominator=1): m_numerator(numerator), m_denominator(denominator) {...}`
+- we can also execute a method in the initializer list, eg: `Fraction(int denominator): Fraction(0, denominator) {...}`, in order to reduce the repeated code that has been written in `Fraction(int numerator=0, int denominator=1)`. this is a good way to realize a designated initializer. note that only a constructor can put a constructor in the intializer list
+- it is also viable to intialize members of a class when we declare them; we prefer this approach
+- the destructor can not take arguments, so it cannot be overloaded, it has no return types, and it should not be called explicitly (like `deallocate()`), eg: `~Fraction {...}`. note that when `exit()` is called, no destructors will be called
+- the implemention of methods needn't be written in the parenthesis of `class Fraction {...}`, but at anywhere with the class name as prefix, eg: `class Fraction {... int getNumerator(); ...};` then somewhere else `int Fraction::getNemerator() { return m_numerator; }`. so that the implemention can be put into `.cpp`
+- if an instance is declared to be `const`, we can only call its **const member functions**, which guarantee that nothing in the instance will be modified, eg: `int getNumerator const {...}`
+- static member variables are shared by all instances of the class; it is existing since this class is initialized (before any instantiation). so if we have `static int count;` inside of `Fraction`, we can access it by `Fraction::count` (remember to initialize it outside of `main()`)
+- static member functions are used to interact with static member variables, since non-static functions can only be used after instantiation. note that when we declare `static int GetNumerator();`, while in implemention we write `int GetNumerator() {...}`, where `static` is omitted
+- keyword `friend` makes it possible for a method to access private variables of instances of other class, eg: `class Temperature { private: int m_temp; public: friend void printWeather(const Temperature &temperature, const Humidity &humidity); }` then in the implemention of `printWeather` we can use `temperature.m_temp` (making the method a friend of class `Temperature`, thus the method can access all details of the class)
+- `friend` also makes it possible for a class to access private variables of instances of other class, eg: `class Temperature {... private: int m_temp; public: friend class Humidity; ...}` then in class `Humidity` we can use `temperature.m_temp`
+- to avoid to make the whole class a friend, we can use `friend void Humidity::displayTemperature(Temperature &temperature);` then implement this method in class `Humidity`
+- if a variable (may be instance) is used only once, we can make it anonymous (not giving it a name), eg: instead of `Cents cents1(6); Cents cents(8); Cents sum = add(cents1, cents2); cout << sum.getCents() << endl`, we do `cout << add(Cents(6), Cents(8)).getCents() << endl`
+- `friend Cents operator+(const Cents &c1, const Cents &c2)` then we can use `c1 + c2` for a custom-class object; it is also possible to add two objects of different type: `friend Cents operator+(int value, const Cents &c1)` then `6 + c1`; if we have a getter of that private variable, we can use it and omit `friend`
