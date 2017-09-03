@@ -86,4 +86,58 @@ WHERE S.sname LIKE 'B_%B';
 SELECT * FROM Sailors S JOIN Reserves R ON (S.sid = R.sid);
 SELECT * FROM Sailors JOIN Reserves USING (sid);
 SELECT * FROM Sailors NATURAL JOIN Reserves;
+
+// operation on two quey results
+SELECT ... FROM ... WHERE...
+UNION / INTERSECT / EXCEPT
+SELECT ... FROM ... WHERE...
+
+// test the existence of any query result
+// seems to return a boolean
+// eg: select all sailors that have red boats
+SELECT *
+FROM   Sailors 
+WHERE  (NOT) EXISTS (SELECT * 
+					 FROM Boats 
+					 WHERE Sailors.sid=Boats.sid AND Boats.color='red')
+
+// we can also use IN
+SELECT *
+FROM   Sailors
+WHERE  Sailors.sid (NOT) IN (SELECT Boats.sid 
+					   		 FROM Boats 
+					   		 WHERE Boats.color='red')
+
+// statistical value: COUNT / SUM / AVG / MAX / MIN (aka. Aggregate Operators)
+// seems to return a number (single column)
+// eg: select the oldest sailor
+SELECT S.sname, S.age 
+FROM   Sailors S 
+WHERE  S.age = (SELECT MAX(S2.age) 
+				FROM Sailors S2);
+
+// do comparisons with a set of query results: ALL / ANY
+// seems to return a table
+// eg: select sailors whose rating is greater than that of all sailors called Bob
+SELECT *FROM   SailorsSWHERE  S.rating > ALL (SELECT S2.rating					   FROM SailorsS2					   WHERE S2.sname='Bob');
+
+// GROUP BY... HAVING ..., which is executed after (SELECT ... FROM ... WHERE...) is done
+// outputs one answer for each group
+// attributes after SELECT must either be aggregate operations, or appear also after GROUP BY
+// i.e. it must be one-column or will be grouped to be one-column
+// attributes after HAVING must have a single value per qualifying group
+// EVERY applies to each row and helps to filter out an entire group
+SELECT   S.rating, MIN(S.salary) 
+FROM     Sailors S
+WHERE    S.rating>0GROUP BY S.rating;
+HAVING   COUNT(*) > 1 AND EVERY (S.age <=60)
+
+// nothing equals to (=) NULL
+// should use IS (NOT) NULL
+SELECT * FROM Sailors2 S WHERE S.ssn IS NULL;
 ```
+
+###INNER / LEFT OUTER / RIGHT OUTER JOIN
+
+![INNER JOIN](https://www.w3schools.com/sql/img_innerjoin.gif) ![LEFT OUTER JOIN](https://www.w3schools.com/sql/img_leftjoin.gif) ![RIGHT OUTER JOIN](https://www.w3schools.com/sql/img_rightjoin.gif)
+
