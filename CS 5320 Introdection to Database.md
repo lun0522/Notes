@@ -141,3 +141,9 @@ SELECT * FROM Sailors2 S WHERE S.ssn IS NULL;
 
 ![INNER JOIN](https://www.w3schools.com/sql/img_innerjoin.gif) ![LEFT OUTER JOIN](https://www.w3schools.com/sql/img_leftjoin.gif) ![RIGHT OUTER JOIN](https://www.w3schools.com/sql/img_rightjoin.gif)
 
+##Relational Algebra
+
+- Selection operator (σ): output a relation containing a subset of the **tuples** from the input relation
+- Projection operator (π): output a relation containing a subset of the **columns** from the input relation
+- Cross Product (×): input two relations and output a relation containing all **pairs of tuples** from both relations
+- Join (⋈)
