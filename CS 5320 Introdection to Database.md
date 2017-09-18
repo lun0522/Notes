@@ -147,3 +147,4 @@ SELECT * FROM Sailors2 S WHERE S.ssn IS NULL;
 - Projection operator (π): output a relation containing a subset of the **columns** from the input relation
 - Cross Product (×): input two relations and output a relation containing all **pairs of tuples** from both relations
 - Join (⋈)
+- Division (/): R/B is the largest relation T such that T×B⊆R (eg: to find the names of sailors who’ve reserved all boats = Reserves / Boats = π\[sid](Reserves) - π\[sid]((π\[sid](Reserves) × Boats - Reserves)), which means to list all possible combination of sid and bid, and subtract the Reserves, then if any sailor has reserved all boats, his sid will not appear in the result)
