@@ -148,3 +148,82 @@ SELECT * FROM Sailors2 S WHERE S.ssn IS NULL;
 - Cross Product (×): input two relations and output a relation containing all **pairs of tuples** from both relations
 - Join (⋈)
 - Division (/): R/B is the largest relation T such that T×B⊆R (eg: to find the names of sailors who’ve reserved all boats = Reserves / Boats = π\[sid](Reserves) - π\[sid]((π\[sid](Reserves) × Boats - Reserves)), which means to list all possible combination of sid and bid, and subtract the Reserves, then if any sailor has reserved all boats, his sid will not appear in the result)
+
+## Tree Indexing
+
+![](http://images.slideplayer.com/16/4964545/slides/slide_12.jpg)
+
+- Non-leaf pages (contain index entries)
+- Leaf pages (contain data entries)
+
+###ISAM (static)
+
+![](http://images.slideplayer.com/32/9946948/slides/slide_7.jpg)
+
+Actually it is a 2-node tree. Index nodes never change after construction, so there will be overflow pages:
+
+![](http://images.slideplayer.com/26/8445128/slides/slide_7.jpg)
+
+###B+ Tree (dynamic)
+
+![](https://i.stack.imgur.com/pJXJI.jpg)
+
+Suppose that each node has **F children nodes** (F = fanout), i.e. F pointers pointing downward; amount of data in total is **n**, and one page can contain **L data entries**, then there will be **N = n/L leaf pages**.
+
+When we do a binary search, every time we divide the rest records into 2 parts, so the time complexity is **log2(n)**. When we use a B+ tree, each time we divide the rest part into F parts, so the time complexity becomes **logF(N)**, or logF(n/L).
+
+Note that there are still L data per entry, and after we retrive an entry using B+ tree, we still have to find out the data we want from these L records. However, since L is a constant, this operation costs constant time, so we cannot see it in the time complexity.
+
+Usually each node, except for the root node, should have at least 50% occupancy. If <50%, consider merging; If >100%, consider splitting. Each node contains d <= F <= 2d entries, where **d is the order** of the tree.
+
+##Hash-Based Indexing
+
+These metohds are only for **equality selections**, while tree indexing also supports range selections.
+
+###Static Hashing
+
+![](http://images.slideplayer.com/26/8697966/slides/slide_3.jpg)
+
+Primary bucket pages are not modified since created, and overflow pages keep growing. We can do rehashing when there are too many overflow pages after the bucket page.
+
+###Extendible Hashing
+
+![](http://os9hogvk5.bkt.clouddn.com/hash_ppt.jpg)
+
+In the example we use the last two digits as hash value.
+
+When a bucket page cannot hold that many data entries, we have to add one more bucket page (local depth +1), and double the directory if necessary, to use one more digit to label bucket pages (global depth +1).
+
+###Linear Hashing
+
+![](http://images.slideplayer.com/26/8697966/slides/slide_14.jpg)
+
+![](http://images.slideplayer.com/26/8697966/slides/slide_16.jpg)
+
+This method does not use directory, but it allows overflow pages. It uses a "Next" pointer, pointing to the next bucket page to split. Suppose that before all splitting, there are N bucket pages.
+
+When we search for a record with a certain hash value R (calculated by hash function h0), if R is equal to or larger than "Next", we can simply retrieve the record in position R; but if it is smaller than "Next", then the record might either locate in R **or** in R+N, since that bucket page has already been splitted, and thus we need to call the hash function that takes **one more digit** into consideration (h1).
+
+As shown in the example, the "Next" pointer hasn't been pointing to the bucket page with h0 = 11 yet, so 43* is put into the overflow page. 
+
+When to split bucket pages is determined by the people who implement it; there is no unified criteria. Just need to make sure that there are not so many overflow pages.
+
+##Sorting
+
+###2-Way External Merge Sort
+
+run: a sorted portion of the file 
+
+- Pass 0: read a page at a time, sort it any algorithm, write it to the disk (need only one buffer page in the main memory) (creates runs of length 1 page)
+
+- Pass 1: merge two runs of length 1 page to a run of length 2
+
+- Pass 2: merge two runs of length 2 page
+
+And so forth. Suppose that we have **N** pages in total, pass 0 costs 2N I/O operations (read and then write, ignore the cost of sorting), while other passes cost 2Nlog2(N). In total, it costs 2N(log2(N)+1) I/O.
+
+![](http://images.slideplayer.com/14/4497575/slides/slide_5.jpg)
+
+It can use only three pages in the main memory: two for input and one for output. If **B** buffer pages can be used in the main memory, in pass 0, we can sort *B* pages and merge them into 1; for other passes, B-1 buffers pages can be used for input, so the number of runs will be multiplied by *B-1* after each run. 
+
+Suppose that except for pass 0, we need **P** passes to sort all data, then B*(B-1)^P=N, hence P=log(B-1)(N/B). Each pass still needs 2N I/O, so the total I/O cost is 2N(log(B-1)(N/B)+1).
