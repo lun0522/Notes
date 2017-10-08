@@ -230,6 +230,15 @@ It can use only three pages in the main memory: two for input and one for output
 
 Suppose that except for pass 0, we need **P** passes to sort all data, then B*(B-1)^P=N, hence P=log(B-1)(N/B). Each pass still needs 2N I/O, so the total I/O cost is 2N(log(B-1)(N/B)+1).
 
+eg: if we have 250 pages to sort, and 5 buffer pages in the main memory:
+
+- pass 0: use 5 buffer pages to create 50 sorted runs
+- pass 1: use 4 buffer pages to read from runs, and 1 as output page, round_up(50/4) = 13
+- pass 2: round_up(13/4) = 4
+- pass 3: round_up(4/4) = 1
+
+Total I/O: 4 passes * 250 pages = 1000
+
 ##Implementation
 
 ###Selection
@@ -361,3 +370,41 @@ In the second step, for each hash value, we read up to B-2 pages from S, and one
 (In step 1, S can split itself into at most B-1 partitions, to reduce the tuples in each partition; in step 2, there can be at most B-2 tuples in each partition)
 
 Unlike sort-merge join, the minimum number of buffer pages in the main memory is determined by the **smaller** relation in this method. So if **relation sizes differ greatly** (i.e. the smaller relation is extremely small), hash join is preferred. Also, it is highly **parallelizable**.
+
+####Blocking / Non-Blocking
+
+- Blocking: needs to read at least one input completely before producing output, eg: SMJ, HJ
+- Non-Blocking: can start when part of input is ready, eg: NLJ
+
+####Ripple joins
+
+When we just want to take a random sample from DB, we may want to randomly read a tuple from each relation, join them and calculate some parameters (eg: confidence), and stop when the requirement is satisfied. Blocking algorithms cannot be used certainly.
+
+A better way is:
+
+1. Retrieve 1 tuple from each of 2 relations, join them, and get 1 tuple
+2. Retrieve 1 more tuple from each of 2 relations, join **all tuples retrieved so far**, and get 4 tuples
+3. Retrieve 1 more, join and get 9 tuples, and so on
+
+###Intersection
+
+Equality on all fields is join condition.
+
+###Cross product
+
+No equality condition
+
+###Union(+) / Difference(-)
+
+- Sorting based approach
+- Hash based approach
+
+###Aggregate Operations
+
+Without grouping: scan the whole relation.
+
+With grouping:
+
+- Sort on group-by attributes
+- Build a hash table with entries < grouping-value, running-info (eg: min, max, sum) >
+- Index-only scan
