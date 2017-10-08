@@ -176,6 +176,8 @@ Note that there are still L data per entry, and after we retrive an entry using 
 
 Usually each node, except for the root node, should have at least 50% occupancy. If <50%, consider merging; If >100%, consider splitting. Each node contains d <= F <= 2d entries, where **d is the order** of the tree.
 
+If use B+ tree but unclustered index, when retrieve more than 5% of tuples, just scan all the data, don't use the tree.
+
 ##Hash-Based Indexing
 
 These metohds are only for **equality selections**, while tree indexing also supports range selections.
@@ -227,3 +229,135 @@ And so forth. Suppose that we have **N** pages in total, pass 0 costs 2N I/O ope
 It can use only three pages in the main memory: two for input and one for output. If **B** buffer pages can be used in the main memory, in pass 0, we can sort *B* pages and merge them into 1; for other passes, B-1 buffers pages can be used for input, so the number of runs will be multiplied by *B-1* after each run. 
 
 Suppose that except for pass 0, we need **P** passes to sort all data, then B*(B-1)^P=N, hence P=log(B-1)(N/B). Each pass still needs 2N I/O, so the total I/O cost is 2N(log(B-1)(N/B)+1).
+
+##Implementation
+
+###Selection
+
+Depends on what do we have.
+
+- **Sequential scan**
+- Has **B+ tree** (binary search, or turn to sequential scan if we have to retrieve >5% unclustered tuples)
+- Has **hashing-based index** (only equality selections)
+
+###Projection
+
+Eliminating duplicates is expensive.
+
+- **External merge sort**, delete unwanted columns in pass 0, and eliminate duplicates in later passes
+- **Hashing-based** projection, all duplicates will go into the same bucket. If the whole hash table doesn't fit into the main memory, just process one butket at a time. If one bucket is still too large, apply another hashing function to split it. This way leads to **parallelizing**
+- **Covering index** if we have. It should include all the projection attributes (can have some extra attributes, doesn't matter); best if projection attributes are prefix of search key. We don't have to retrive data, but do index-only scan and eliminate duplicates within single pass
+- **RID joins**, if we have index for (SearchKey1, RID) and index for (SearchKey2, RID), but we want distinct (SearchKey1, SearchKey2), we can do projections using these two indices respectively, join them, get (SearchKey1, SearchKey2, RID), and delete RID at last
+
+###Join
+
+**Sailors**: 80 tuples / page, 500 pages
+
+**Reserves**: 100 tuples / page, 1,000 pages
+
+Both of them have no indices.
+
+####TNLJ (Tuple Nested Loop Join):
+
+```d
+foreach tuple r in R do 
+    foreach tuple s in S do
+        if r.sid == s.sid then add <r, s> to result
+```
+
+**Total I/O = 1,000 + 100 * 1,000 * 500 = 50,001,000**
+
+(Always have to read 1000 pages of R; then for each tuple in R (100 * 1000 tuples), read all pages of S (500 pages))
+
+####PNLJ (Page Nested Loop Join):
+
+Keep one page, rather than one tuple, from each table in main memory.
+
+```d
+foreach page p1 in R do 
+    foreach page p2 in S do
+        foreach r in p1 do 
+            foreach s in p2 do
+                if r.sid == s.sid then add <r, s> to result
+```
+
+**Totol I/O = 1,000 + 1,000 * 500 = 501,000**
+
+(Always have to read 1000 pages of R; then for each page in R (1000 pages), read all pages of S (500 pages))
+
+Smaller relation (Sailor) should be put in the outer loop instead:
+
+**Totol I/O = 500 + 500 * 1,000 = 500,500**
+
+(Always have to read 500 pages of S; then for each page in S (500 pages), read all pages of R (1000 pages))
+
+####BNLJ (Block Nested Loop Join):
+
+Main memory can hold more pages. Keep some pages of the outer relation when we scan the inner one.
+
+Suppose that we have a 100-page block:
+
+**Totol I/O = 500 + (500 / 100) * 1,000 = 5,500**
+
+(Always have to read 500 pages of S; then for each block of S (500 / 100 blocks), read all pages of R (1000 pages))
+
+Note that use 50 buffer pages for S and 50 for R will **not** increase the speed, because in the inner loop we always have to read all pages of R, so the total I/O  will only become 500 + (500 / 50) * 1,000 = 10,500.
+
+But if the benefit of **sequential reads** is taken into consideration, which means reading 50 pages of R at a time is faster than reading one page for 50 times, we can consider to evenly distribute buffers between S and R.
+
+####INLJ (Index Nested Loop Join):
+
+Suppose that we have an hashing-based index on S, on the join attribute. (1.2 I/O for hashing-based, 2~4 I/O for B+ tree)
+
+```d
+foreach tuple r in R do
+    foreach tuple s in S where ri == sj do
+        add <r, s> to result
+```
+
+**Totol I/O = 1,000 + 100 * 1,000 * (1.2  + 1) = 221,000**
+
+(Always have to read 1000 pages of R; then for each tuple in R (100 * 1000 tuples), use 1.2 I/O to find the index of corresponding tuple in S, and 1 I/O to retrieve the data)
+
+If we have hashing-based index on R, and use R as inner relation, that is, we are to find several reserves made by each sailor (on average one sailor has made (100 * 1000) / (80 * 500) = 2.5 reserves), then if the index is **clustered** (1 I/O to retrieve 2.5 tuples in R):
+
+**Totol I/O = 500 + 80 * 500 * (1.2  + 1) = 88,500**
+
+If the index is **unclustered** (2.5 I/O to retrieve 2.5 tuples in R):
+
+**Totol I/O = 500 + 80 * 500 * (1.2  + 2.5) = 148,500**
+
+####SMJ (Sort-merge Join):
+
+Fully sort R and S (eg: by sid). Then scan R and S simultaneously, and output where R.sid == S.sid.
+
+**Cost = (cost to sort R) + (cost to sort S) + (scan cost)**
+
+A refinement version is, suppose that we have L and S pages in two relations (L > S), and B buffer pages in the main memory, in pass 0, it outputs L/B and S/B runs for each relation (each run is of length B); in pass 1, we read one page from each run, which requires that B-1 >= L/B + S/B, into the main memory, and do the join.
+
+- B-1 >= L/B + S/B
+- B^2 - B >= L + S
+- B > 2 * sqrt(L)
+
+Pass 0 requires 2(L+S) I/O (read and write), while pass 1 requires only (L+S) I/O (read). So this method requires 3(L+S) I/O in total **(linear cost)**. However, the operations done in pass 1 seem to be really heavy.
+
+**Totol I/O = (500 + 1,000) * 3 = 4,500**
+
+The result is **sorted**.
+
+####HJ (Hash Join):
+
+![](http://images.slideplayer.com/31/9720375/slides/slide_13.jpg)
+
+Suppose that we have relations L and S (L > S)
+
+Firstly, partition both relations using a hash function. Note that if the main memory has B buffer pages, the hash function can partition tuples into B-1 partitions at most, because there should be one output buffer page waiting for each partition.
+
+In the second step, for each hash value, we read up to B-2 pages from S, and one page from L, and do the join; and then read another page from L, etc. It is possible that more than B-2 pages in S have the same hash value, then we will have to use another function to split them. If we want to avoid more splitting, we should have:
+
+- S / (B-1) <= B-2
+- B > sqrt(S)
+
+(In step 1, S can split itself into at most B-1 partitions, to reduce the tuples in each partition; in step 2, there can be at most B-2 tuples in each partition)
+
+Unlike sort-merge join, the minimum number of buffer pages in the main memory is determined by the **smaller** relation in this method. So if **relation sizes differ greatly** (i.e. the smaller relation is extremely small), hash join is preferred. Also, it is highly **parallelizable**.
