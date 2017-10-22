@@ -1,4 +1,4 @@
-##Releational Database
+##Relational Database
 
 - **Database** is a collection of one or more relations
 - **Relational database** is a collection of relations with distinct relation names
@@ -176,7 +176,7 @@ Note that there are still L data per entry, and after we retrive an entry using 
 
 Usually each node, except for the root node, should have at least 50% occupancy. If <50%, consider merging; If >100%, consider splitting. Each node contains d <= F <= 2d entries, where **d is the order** of the tree.
 
-If use B+ tree but unclustered index, when retrieve more than 5% of tuples, just scan all the data, don't use the tree.
+If use B+ tree but unclustered index, when retrieve more than 5% of tuples, just scan all the data, don't use the tree. (For unclustered index, we can sort data entries according to the page they are going to read, to avoid that we read the same page for multiple times)
 
 ##Hash-Based Indexing
 
@@ -408,3 +408,70 @@ With grouping:
 - Sort on group-by attributes
 - Build a hash table with entries < grouping-value, running-info (eg: min, max, sum) >
 - Index-only scan
+
+#Design of Database
+
+1. Conceptual design (consider what realation to put into the database, create data model) - **ER Model**
+2. Schema refinement/normalization (remove bad properties like redundancy) - **Function Dependencies**
+
+##ER Model
+
+- **Entity set**: collection of similar objects (similar to a class), represented by a **rectangle**
+- **Attribute**: property of an entity set, represented by an **oval**
+- **Relationship set**: collection of connections between two or more entities, represented by a **diamond**, consisting of tuples with one component for each related entity set. Can be multiways (multiple columns)
+- **Superkey**: in a relationship set, the key of **all** the entities involved
+
+One drinker must have one favorite beer, but one beer can be favorited by several drinkers:
+![](http://os9hogvk5.bkt.clouddn.com/16__ER.jpg)
+
+Assuming a beer cannot be made by more than one manufacturer, and **all (thick line means total participation)** manufacturers must have exactly one best-seller respectively:
+![](http://os9hogvk5.bkt.clouddn.com/16___ER.jpg)
+
+One entity can play as different roles in a relationship:
+![](http://os9hogvk5.bkt.clouddn.com/16_ER_1.jpg)
+
+- **Subclass**: no multiple inheritance, represented by **isa triangle** (pointing to the superclass). no need to store instances of the subclass into another table; can create a table that relates instances of the subclass to attributes that only the subclass has, or add a column of the attribute that only the subclass has, and assign NULL to those not of the subclass
+![](http://os9hogvk5.bkt.clouddn.com/16_ER_2.jpg)
+
+- **Weak entity**: an owner entity can own many weak entities, while each weak entity has a partial key to identify itself *only* in its owner entity, so a weak entity is unique only when combined with its owner entity
+![](http://os9hogvk5.bkt.clouddn.com/16_ER_3.jpg)
+
+- **Aggregation**: treat a relationship set as an entity set, to participate in another relatioship
+![](http://os9hogvk5.bkt.clouddn.com/16_ER_4.jpg)
+
+##Function Dependencies
+
+If the rating(R) of a sailor **determines** his wage(W), we don't have to store both information in each tuple, but only store the rating, and use another table to map rating to wage, and say R→W. Note:
+
+- different wage can correspond to the same rating, so it is **not** necessary that W→R
+- if rating is a key of Sailor (not necessary to be primary), it should **not** be regarded as redunduncy, because the "another table" will have the same row number as Sailor, and thus will not help us save any space
+
+This is a **decomposition** accoding to **function dependency** to remove **redundancy**.
+
+###Finding FDs
+
+Armstrong's Axioms:
+
+- **Reflexivity**: if Y⊆X, then X→Y
+- **Augmentation**: if X→Y, then XZ→YZ for any Z
+- **Transitivity**: if X→Y and Y→Z, then X→Z
+
+Suppose that F is a set of FDs, if we can start from it and apply Armstrong's Axioms to obtain a new FD, then we say the new FD is **derived** by F, and we call the collection of all FDs that can be derived from F **closure** F+.
+
+If we just want to find out whether a certain FD X→Y can be derived from F, we don't have to calculate the whole F+, which can be huge, but only calculate the **attribute closure** of X, and see whether Y is in the result closure:
+
+1. let closure = X
+2. for each pair of dependency U→V in F, if U⊆F, closure += V
+3. after that, the closure may contain more attributes, so we loop again to see whether more attributes can be added into the closure
+4. stop the outer loop if no attribute is added to the closure during a certain inner loop
+
+For example, if we have F = {A→D, AB→E, BI→E, CD→I, E→C}, and we want to know whether F implies AE→D, we should find out whether D is in (AE)+:
+
+1. let closure = AE
+2. loop 1: add all attributes that can be inferred from A, E or AE. because A→D and E→C, add D and C to the closure. now closure = ACDE
+3. loop 2: because CD→I, add I to the closure. now closure = ACDEI
+4. loop 3: no attributes can be added
+
+As the result, we can infer ACDEI from AE, which includes D, so we have AE→D.
+
+Suppose that *a* is the number of attributes, and *f* is number of FDs in F, we need to compare at most *a* attributes each time, in each loop we need to compare for at most *f* times, and in the worst case we need *f* loops, the time complexity is O(*a(f^2)*).
