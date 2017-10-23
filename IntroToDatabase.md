@@ -342,7 +342,7 @@ Fully sort R and S (eg: by sid). Then scan R and S simultaneously, and output wh
 
 **Cost = (cost to sort R) + (cost to sort S) + (scan cost)**
 
-A refinement version is, suppose that we have L and S pages in two relations (L > S), and B buffer pages in the main memory, in pass 0, it outputs L/B and S/B runs for each relation (each run is of length B); in pass 1, we read one page from each run, which requires that B-1 >= L/B + S/B, into the main memory, and do the join.
+A **refinement** version is, suppose that we have L and S pages in two relations (L > S), and B buffer pages in the main memory, in pass 0, it outputs L/B and S/B runs for each relation (each run is of length B); in pass 1, we read one page from each run, which requires that B-1 >= L/B + S/B, into the main memory, and do the join.
 
 - B-1 >= L/B + S/B
 - B^2 - B >= L + S
@@ -458,6 +458,8 @@ Armstrong's Axioms:
 
 Suppose that F is a set of FDs, if we can start from it and apply Armstrong's Axioms to obtain a new FD, then we say the new FD is **derived** by F, and we call the collection of all FDs that can be derived from F **closure** F+.
 
+###Attribute Closures
+
 If we just want to find out whether a certain FD X→Y can be derived from F, we don't have to calculate the whole F+, which can be huge, but only calculate the **attribute closure** of X, and see whether Y is in the result closure:
 
 1. let closure = X
@@ -475,3 +477,70 @@ For example, if we have F = {A→D, AB→E, BI→E, CD→I, E→C}, and we want 
 As the result, we can infer ACDEI from AE, which includes D, so we have AE→D.
 
 Suppose that *a* is the number of attributes, and *f* is number of FDs in F, we need to compare at most *a* attributes each time, in each loop we need to compare for at most *f* times, and in the worst case we need *f* loops, the time complexity is O(*a(f^2)*).
+
+Other uses of attribute closures:
+
+- To check whether X is a **key** of U, we can check whether the attribute closure of X contains all attributes of the relation (X→U)
+- If (F+) = (G+), then F is a **cover** for G and vice versa
+
+###Lossless Join Decomposition
+
+To remove the redundancy, we can decompose a relation into two or more relations. The decomposition of R into X and Y is lossless-join (no information lose) if and only if:
+
+**X∩Y→X**, or **X∩Y→Y**, *i.e.* the intersection column if X and Y must be a **key** of X or Y.
+
+###Dependency Preserving Decomposition
+
+For lossless join decomposition, to verify some FDs, we have to join the decomposed tables. For example, if we have CSJDPQV and {JP→C, SD→P}, and decompose CSJDPQV into CSJDQV and SDP according to SD→P, whne a new data is inserted, we will not be able to verify JP→C without a join.
+
+Dependency preserving decomposition avoids it. It is not free of redundancy, but because join is expensive, it enhances the performance.
+
+If F is FDs of R, and X is a subset of attributes of R, then Fx means FDs where in each U→V, U and V are in X. A decomposition of R into X and Y is **dependency preserving** if:
+
+**((Fx ∪ Fy)+) = (F+)**
+
+In that case, when a record is inserted, we just have ti check Fx in X, and Fy in Y respectively, without a join.
+
+###Boyce-Codd Normal Form (BCNF)
+
+If a relation R is of BCNF, for each U→V in FDs (U is a set of atrributes while V is a single atrribute), it must be either:
+
+- **U∋V** (called a trivial FD)
+- **U contains a key** for R
+
+If the condition is violated, decompose R into **R-V** and **UV**, and repeat if necessary. 
+
+Note that because V is a single column and is not in U because of the violation, R-V should contain U, so (R-V)∩(UV) must contain U; we also have U→V, so we can say (R-V)∩(UV)→V, which makes it a lossless-join.
+
+For example, if we have CSJDPQV, where C is a key, and FDs {JP→C, SD→P, J→S}. 
+
+1. for SD→P, decompose CSJDPQV into CSJDQV and SDP
+2. for J→S, decompose CSJDQV into CJDQV and JS
+3. for JP→C, J and P are not in the same table anymore, so do nothing
+
+(the order of decomposition affects the result)
+
+###Third Normal Form (3NF)
+
+Similar to the relationship between lossless join decomposition and dependency preserving decomposition, 3NF is less strict than BCNF.
+
+If a relation R is of BCNF, for each U→V in FDs (U is a set of atrributes while V is a single atrribute), it must be either:
+
+- **U∋V** (called a trivial FD)
+- **U contains a key** for R
+- **U is part of some keys** for R
+
+To obtain the 3NF of relation R, whose FDs are F, firstly, we have to find the minimal cover G for F where:
+
+- (G+) = (F+)
+- right side of each FD in G is a single attribute
+- in G, if any FD is deleted, or any attribute in a FD is deleted, the closure changes (we can compute the attribute closure to see whether a FD is redundant)
+
+For example, if we have F {A→B, ABCD→E, EF→G, EF→H, ACDF→EG}, then:
+
+1. for ABCD→E, we can only preserve ACD→E because A→B
+2. for ACDF→EG, if we take it away and compute (ACDF)+ in F, we will find that EG is still included in the attribute closure, so ACDF→EG is redundant
+
+So G is {A→B, ACD→E, EF→G, EF→H}.
+
+Then we compute the lossless join decomposition of G. Finally, if some U→V in G is not preserved, add UV.
