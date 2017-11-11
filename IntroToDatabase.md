@@ -421,7 +421,7 @@ With grouping:
 - **Relationship set**: collection of connections between two or more entities, represented by a **diamond**, consisting of tuples with one component for each related entity set. Can be multiways (multiple columns)
 - **Superkey**: in a relationship set, the key of **all** the entities involved
 
-One drinker must have one favorite beer, but one beer can be favorited by several drinkers:
+One drinker must have one favorite beer, but one beer can be favorited by several drinkers **(arrow means "one")**:
 ![](http://os9hogvk5.bkt.clouddn.com/16__ER.jpg)
 
 Assuming a beer cannot be made by more than one manufacturer, and **all (thick line means total participation)** manufacturers must have exactly one best-seller respectively:
@@ -433,7 +433,7 @@ One entity can play as different roles in a relationship:
 - **Subclass**: no multiple inheritance, represented by **isa triangle** (pointing to the superclass). no need to store instances of the subclass into another table; can create a table that relates instances of the subclass to attributes that only the subclass has, or add a column of the attribute that only the subclass has, and assign NULL to those not of the subclass
 ![](http://os9hogvk5.bkt.clouddn.com/16_ER_2.jpg)
 
-- **Weak entity**: an owner entity can own many weak entities, while each weak entity has a partial key to identify itself *only* in its owner entity, so a weak entity is unique only when combined with its owner entity
+- **Weak entity**: an owner entity can own many weak entities, while each weak entity has a partial key to identify itself *only* in its owner entity, so a weak entity is unique only when combined with its owner entity **(note the bold lines; underscore the primary key; use dotted underscore lines for the weak side)**
 ![](http://os9hogvk5.bkt.clouddn.com/16_ER_3.jpg)
 
 - **Aggregation**: treat a relationship set as an entity set, to participate in another relatioship
@@ -544,3 +544,175 @@ For example, if we have F {A→B, ABCD→E, EF→G, EF→H, ACDF→EG}, then:
 So G is {A→B, ACD→E, EF→G, EF→H}.
 
 Then we compute the lossless join decomposition of G. Finally, if some U→V in G is not preserved, add UV.
+
+##Transactions and Concurrency Control
+
+- Transaction: sequence of steps
+- Atomicity: a transaction should execute completely (including **commit**) or not at all (be **rolled back**)
+- Consistency: preservation of data consistency
+- Isolation: no harmful interference between transactions is permitted
+- Durability: once a transaction commits, the changes should be persistent
+- Schedule: a sequence of operations performed by a set of transactions on the DB
+
+```sql
+START TRANSACTION;
+
+UPDATE ...
+SET ...
+WHERE ...
+
+UPDATE ...
+SET ...
+WHERE ...
+
+COMMIT;
+```
+
+If no transaction block is specified, each operation runs in its own transaction.
+
+**R-read W-write C-commit A-abort**
+
+Three isolation anomalies:
+
+- Dirty read: reading a value modified by an uncommitted transaction, especially when that transacrion then aborts. eg: **RW1(A)** *RW2(A)* *RW2(B)* **RW1(B)**
+- Unrepeatable read: Read the same data item twice, get different. eg: **R1(A)** *W2(A)* *C2* **R1(A)**
+answer
+- Lost Update: transactions' writing get mixed up giving an inconsistent DB at the end. eg: **W3(A)** *W4(A)* *W4(B)* **W3(B)**
+
+###Serializability
+
+####Final-State Serializability
+
+If there is some **serial** schedule S' involving the same transactions as S, such that the final DB is the same after executing S and S.
+
+eg: **R1(A)** *W2(A)* **R1(A)** **C1** *C2*
+
+It cares more about the writing, so that the final data stored on the disk will be the same. But the example above can still contain unrepeatable read.
+
+####View Serializability
+
+S is view serializable if it is view-equivalent to some serial schedule:
+
+![](http://os9hogvk5.bkt.clouddn.com/20_1.png)
+
+This is nice but difficult to implement in practice.
+
+####Conflict Serializability
+
+Two operations by **different** transactions on the same object **conflict** if **at least one is a write** when interleaving (WW->lost update; RW->unrepeatable read; WR->dirty read). Conflicting operations do not commute (will have different result if change in order)
+
+In a conflict graph, each node is a transaction, and the edge from i to j represents an operation of i that **conflicts** with and **precedes** an operation of j.
+
+![](http://os9hogvk5.bkt.clouddn.com/21_2.jpg)
+
+A schedule is conflict serializable if its conflict graph contains **no cycle** (cycles can only be caused by interleaving, so conflict graphs of serial schedules can have edges, but no cycles).
+
+![](http://os9hogvk5.bkt.clouddn.com/21_1.jpg)
+
+###Abort (Rolling Back)
+
+####Recoverable
+
+A transaction **commits** only after the commit of all transactions whose changes it has read. 
+
+However, it is hard to implement.
+
+####Avoids Cascading Aborts (ACA)
+
+A transaction never **reads** uncommitted writes. 
+
+Limit on the time of read, so it's more strict. But it only cares about read, and cannot deal with the situation where two transanctions write to the same object, but then the earlier one aborts.
+
+####Strict
+
+Whenever a transaction T **writes** to an object, no other transaction can read or write to that object until T has committed or aborted.
+
+![](http://os9hogvk5.bkt.clouddn.com/21_4.jpg)
+
+###Protocols and Properties
+
+Protocols are used for implementing properties. They just make sure that no bad thing happens, but some good things are also forbidden. 
+
+To reduce the good things forbidden, we want to minimize the difference between the what the property (serializability or abort) allows and what the protocol allows.
+
+####Locking-Based Protocols
+
+- read locks – can be shared (S)
+- write locks – must be exclusive (X)
+
+If every transaction require all locks at the beginning , and only release the lock after commit, conflict-serializability is enforced, since there is no interleaving. 
+
+If we allow them to acquire locks when needed, it can cause deadlock and no transaction starts. If we allow them to release the lock before commit when not need it, it can cause cascading abort if it aborts later.
+
+####Two-Phase Locking (2PL)
+
+Allow acquiring locks when needed, release locks when not needed, and guarantee conflict-serializability:
+
+- Phase 1: only acquire locks 
+- Phase 2: only release locks
+
+![](http://os9hogvk5.bkt.clouddn.com/22_2.jpg)
+
+Pros and cons
+
+- Conservative: no deadlocks, but need to know all objects up front, and has less concurrency
+- Strict: no cascading aborts, but has less concurrency
+
+"2PL" can refer to all 4 combinations of conservation and strictness, or only to the non-strict and non-conservative version. In this course, "2PL" without indication refers to **strict conservative 2PL**.
+
+In practice, strict non-conservative 2PL is the most commonly used protocol. We have to deal with deadlocks in that case.
+
+####Deadlock Prevention
+
+Assign priorities based on timestamps. Older transactions, *i.e.* lower timestamps have higher priorities. The transaction with higher priority never aborts.
+
+If Ti wants a lock that Tj holds:
+
+- For **wound-wait** policy, if Pi > Pj, Tj aborts; else Ti waits
+- For **wait-die** policy, if Pi > Pj, Ti waits; else Ti aborts (*Pro*: transaction that hold locks never abort. *Con*: younger transactions that cause deadlocks are aborted repeatedly)
+
+####Deadlock Detection
+
+Create a waits-for graph, where nodes are transactions T, and the edge from i to j means Ti waits for Tj. While a circle in the graph is detected, abort one of the transactions.
+
+####Phantom Problem
+
+If T1 is only interested in "red" things, it only requires a lock on them. Then T2 inserts another "red" thing into the DB. After that if T1 reads all "red" things again, it will find that the number of them is increased, *i.e.* an unrepeateable read is produced.
+
+####Index Locking
+
+To solve the phantom problem, we can lock more pages than we currently need, so that no "red" can be inserted when T1 hasn't committed.
+
+For a B+ tree, that means we should not only lock the data entry. The easiest way is to lock all index pages that have been traversed, including the root node. However, that makes the root node and some nodes near the root unaccessible for all other transactions, and makes the performance poor.
+
+Instead, when we move to high level nodes of the tree, we can realease nodes near to the root, though it violates 2PL. 
+
+For insert, simply release the lock on the parent when we reach the child. For insert and delete, what we have to find is the **safe node**: changes will not **propagate up beyond** this node. All locks on its ancestor can be released.
+
+Requirement for safe node:
+
+- Insert: node is not full
+- Delete: node is not half-empty
+
+![](http://os9hogvk5.bkt.clouddn.com/23_1.jpg)
+
+Search 38:
+
+1. Acquire lock on A
+2. Acquire lock on B; release lock on A
+3. Acquire lock on C; release lock on B
+4. Acquire lock on D; release lock on C
+5. Find 38, release all locks
+
+Insert 45 (assume that only insert one entry):
+
+1. Acquire lock on A
+2. Acquire lock on B; since B is not full and thus is safe, release lock on A
+3. Acquire lock on C; since C is full and thus is not safe (may propagate up after insertion), hold lock on B
+4. Acquire lock on D, insert, release all locks
+
+####Multiple-Granularity Locks
+
+Put database-tables-pages-tuples in one tree. We can lock on any level (node).
+
+Use **intention locks** in this protocol. To get S lock, must hold IS (intention-S) lock on the parent node; to get X lock, must hold IX lock on the parent node.
