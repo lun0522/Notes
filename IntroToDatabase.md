@@ -548,11 +548,11 @@ Then we compute the lossless join decomposition of G. Finally, if some U→V in 
 ##Transactions and Concurrency Control
 
 - Transaction: sequence of steps
+- Schedule: a sequence of operations performed by a set of transactions
 - Atomicity: a transaction should execute completely (including **commit**) or not at all (be **rolled back**)
 - Consistency: preservation of data consistency
 - Isolation: no harmful interference between transactions is permitted
 - Durability: once a transaction commits, the changes should be persistent
-- Schedule: a sequence of operations performed by a set of transactions on the DB
 
 ```sql
 START TRANSACTION;
@@ -575,8 +575,7 @@ If no transaction block is specified, each operation runs in its own transaction
 Three isolation anomalies:
 
 - Dirty read: reading a value modified by an uncommitted transaction, especially when that transacrion then aborts. eg: **RW1(A)** *RW2(A)* *RW2(B)* **RW1(B)**
-- Unrepeatable read: Read the same data item twice, get different. eg: **R1(A)** *W2(A)* *C2* **R1(A)**
-answer
+- Unrepeatable read: Read the same data item twice, get different answer. eg: **R1(A)** *W2(A)* *C2* **R1(A)**
 - Lost Update: transactions' writing get mixed up giving an inconsistent DB at the end. eg: **W3(A)** *W4(A)* *W4(B)* **W3(B)**
 
 ###Serializability
@@ -605,21 +604,26 @@ In a conflict graph, each node is a transaction, and the edge from i to j repres
 
 ![](http://os9hogvk5.bkt.clouddn.com/21_2.jpg)
 
-A schedule is conflict serializable if its conflict graph contains **no cycle** (cycles can only be caused by interleaving, so conflict graphs of serial schedules can have edges, but no cycles).
+A schedule is conflict serializable if its conflict graph contains **no directed cycle** (which equals that it has the same conflict graph as some serial schedule).
 
 ![](http://os9hogvk5.bkt.clouddn.com/21_1.jpg)
+
+If there is:
+
+- **Commit**: commits are ignored when we determine conflicting operations. eg: **R1(A)** **C1** *W2(A)* contains conficting operations
+- **Abort**: the aborted transaction is cleaned up immediately and is regarded never happen, so all operations of it should be ignored. eg: **R1(A)** **A1** *W2(A)* does not contain conficting operations
 
 ###Abort (Rolling Back)
 
 ####Recoverable
 
-A transaction **commits** only after the commit of all transactions whose changes it has read. 
+A transaction **commits** only after the commit of all transactions whose changes it has read. So it will survive any abort after it commits.
 
 However, it is hard to implement.
 
 ####Avoids Cascading Aborts (ACA)
 
-A transaction never **reads** uncommitted writes. 
+A transaction never **reads** uncommitted writes from **other** transactions. 
 
 Limit on the time of read, so it's more strict. But it only cares about read, and cannot deal with the situation where two transanctions write to the same object, but then the earlier one aborts.
 
@@ -642,7 +646,7 @@ To reduce the good things forbidden, we want to minimize the difference between 
 
 If every transaction require all locks at the beginning , and only release the lock after commit, conflict-serializability is enforced, since there is no interleaving. 
 
-If we allow them to acquire locks when needed, it can cause deadlock and no transaction starts. If we allow them to release the lock before commit when not need it, it can cause cascading abort if it aborts later.
+If we allow them to acquire locks when needed, it can cause **deadlocks** and no transaction starts. If we allow them to release the lock before commit when not need it, it can cause **cascading abort** if it aborts later.
 
 ####Two-Phase Locking (2PL)
 
@@ -669,7 +673,7 @@ Assign priorities based on timestamps. Older transactions, *i.e.* lower timestam
 If Ti wants a lock that Tj holds:
 
 - For **wound-wait** policy, if Pi > Pj, Tj aborts; else Ti waits
-- For **wait-die** policy, if Pi > Pj, Ti waits; else Ti aborts (*Pro*: transaction that hold locks never abort. *Con*: younger transactions that cause deadlocks are aborted repeatedly)
+- For **wait-die** policy, if Pi > Pj, Ti waits; else Ti aborts (*Pro*: transaction that hold locks never abort. *Con*: younger transactions that cause deadlocks are aborted repeatedly for the same reason)
 
 ####Deadlock Detection
 
@@ -716,3 +720,113 @@ Insert 45 (assume that only insert one entry):
 Put database-tables-pages-tuples in one tree. We can lock on any level (node).
 
 Use **intention locks** in this protocol. To get S lock, must hold IS (intention-S) lock on the parent node; to get X lock, must hold IX lock on the parent node.
+
+###Optimistic Concurrency Control (OCC)
+
+If conflicts are rare, we don't use locks, but check for conflicts before commit. Transactions have three phases:
+
+- **READ**: read from the database, and only make changes to private copies of objects
+- **VALIDATE**: check for conflicts
+- **WRITE**: make local copies of changes public
+- **ReadSet(Ti)**: set of objects read by Ti
+- **WriteSet(Ti)**: set of objects modified by Ti
+
+There is no conflict in these three scenarios (no one needs to be aborted and restarted):
+
+![](http://os9hogvk5.bkt.clouddn.com/24_1.jpg)
+![](http://os9hogvk5.bkt.clouddn.com/24_2.jpg)
+![](http://os9hogvk5.bkt.clouddn.com/24_3.jpg)
+
+VALIDATE and WRITE can merge into one phase (they consume negligible time compared with READ), and only one transaction can be in that phase (scenario 3 needn't be considered since no writes overlap).
+
+In that case, to validate Ti, we need to find all transactions Tj that commit after Ti starts (potential overlapping), and check whether ReadSet(Ti) ∩ WriteSet(Tj) is empty is true for all Tj. If so, write and commit Ti, otherwise abort and restart.
+
+Overheads in OCC:
+
+- Must record read/write activity in ReadSet and WriteSet per transaction
+- Must check for conflicts during validation
+- Transactions that fail validation must be restarted, which is not suitable for a high-contention workload
+
+###Multiversion Concurrency Control (MVCC)
+
+The idea is to maintain several versions of each data item, so that the time dependency can be satisfied (by reading from a history version rather than the latest one) even if the schedule is not conflict-serializable.
+
+####Timestamp MVCC Protocol
+
+Each transaction gets a timestamp when it arrives in the system, which is used to guarantee serializability.
+
+If Ti wants to read object A, system shows it the version k, where k is the largest such that k < i (*i.e.* the newest version before i).
+
+If Ti wants to write to object A, check whether there is a Tj where j > i (*i.e.* Tj starts later than Ti) already reads version k for some k < i (*i.e.* Tj reads a version prior to i). If so, Tj cannot know what has Ti done to object A, and Ti has to abort and restart with a higher timestamp.
+
+Abort-related properties can also be achieved with an extended protocol. For instance, for recoverability, delay commit of any transaction T until all transactions T has "read from" have committed.
+
+####Snapshot Isolation
+
+Take a snapshot of the **entire** database at the beginning. Following transactions will only operate on this snapshot.
+
+There exist write skew anomalies, which is not possible in a serializable system. Two transactions may read and write to the same objects at exactly the same time, without seeing each other.
+
+For better performance, we can relax isolation and admit some anomalies for better performance, whose side effect is reduction in serializability.
+
+SQL standard provides four isolation levels:
+
+![](http://os9hogvk5.bkt.clouddn.com/25_1.jpg)
+
+Snapshot isolation provides a SERIALIZABLE implementation, but introduces a new kind of anomaly, so it is not really serializable.
+
+###Recovery and ARIES
+
+The Recovery Manager guarantees atomicity and durability.
+
+To reduce response time, the buffer manager will **not force** every write to disk when a transaction commits, and will allow to **steal** buffer pages from uncommited transactions.
+
+Log is an ordered list of REDO/UNDO actions. It will survive crashes and tell the system how to restore the state before crashing after the system is back online.
+
+####Write-Ahead Logging (WAL)
+
+The Write-Ahead Logging Protocol:
+
+- Must write the log record for an update before the corresponding data page gets to disk.
+- Must write all log records for a transaction before commit.
+
+Identifier of log:
+
+- Each log record has an increasing unique Log Sequence Number (**LSN**), and a **prevLSN** pointing to the last LSN involving this transaction
+- Each data page contains a **pageLSN**, which is the LSN of the most recent log record for an update to that page
+- System keeps track of **flushedLSN**, which is the max LSN flushed to the disk so far
+
+Tables for recording states (in RAM):
+
+- **Transaction table**: one item for each active transaction; contains transID, status, and **lastLSN**
+- **Dirty page table**: one item for each dirty page in the buffer pool; contains **recLSN**,which is the LSN of the log record which first caused the page to be dirty
+
+Besides normal logs, when we do UNDO actions, we keep logging into Compensation Log Records (CLRs), which has one extra field, **undonextLSN** that points to the next LSN to undo. If the system crashes during UNDO, we just redo an UNDO, and never undo an UNDO.
+
+####Normal Execution of a Transaction
+
+- Strict 2PL
+- Steal and no-force buffer management
+- Write-ahead logging
+
+When commit:
+
+- write commit log record
+- flush log up to lastLSN
+- remove transaction from transaction table
+- write end log record
+
+When abort:
+
+- write abort log record
+- get lastLSN of transaction from transaction table
+- write a CLR for each undo action
+- undo changes following chain of log records backward via the prevLSN field
+- write end log record
+
+####Checkpointing
+
+A checkpoint only record the **transaction table** and **dirty page table**, to minimize the time taken to restore the state of a system before crashes. It is saved in a safe place (master record).
+
+####Crash Recovery
+
