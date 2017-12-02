@@ -801,7 +801,7 @@ Tables for recording states (in RAM):
 - **Transaction table**: one item for each active transaction; contains transID, status, and **lastLSN**
 - **Dirty page table**: one item for each dirty page in the buffer pool; contains **recLSN**,which is the LSN of the log record which first caused the page to be dirty
 
-Besides normal logs, when we do UNDO actions, we keep logging into Compensation Log Records (CLRs), which has one extra field, **undonextLSN** that points to the next LSN to undo. If the system crashes during UNDO, we just redo an UNDO, and never undo an UNDO.
+Besides normal logs, when we do UNDO actions, we keep logging into Compensation Log Records (**CLRs**), which has one extra field, **undonextLSN** that points to the next LSN to undo. If the system crashes during UNDO, we just redo an UNDO, and never undo an UNDO.
 
 ####Normal Execution of a Transaction
 
@@ -826,7 +826,64 @@ When abort:
 
 ####Checkpointing
 
-A checkpoint only record the **transaction table** and **dirty page table**, to minimize the time taken to restore the state of a system before crashes. It is saved in a safe place (master record).
+A checkpoint only records the **transaction table** and **dirty page table**, to minimize the time taken to restore the state of a system before crashes. It is saved in a safe place (master record).
 
 ####Crash Recovery
 
+![](http://os9hogvk5.bkt.clouddn.com/26_1.jpg)
+
+#####Analysis Phase
+
+Recovers the transaction table and dirty page table by:
+
+- For "End" record, remove transaction from the transaction table
+- For "Update" record, if page is not in dirty page table, add it and set recLSN = LSN
+- For other records, add trasaction to transaction table, set lastLSN = LSN, and change status if commit
+
+to determine:
+
+1. where to start redo
+2. pages in the bufer pool that were dirty when crash
+3. active transactions when crash that should be undone
+
+#####REDO Phase
+
+Starts from the smallest recLSN:
+
+- Redo updates (**including those abort**), and set pageLSN = LSN without other logging
+- Redo CLRs
+
+Conditions where not need to redo an action:
+
+- Page is not in dirty page table (updated but has been written to disk between begin and end checkpoints)
+- Page is in dirty page table, but its LSN < recLSN
+- Page is in dirty page table, but its LSN <= pageLSN in DB (frame stolen by other transactions)
+
+#####UNDO Phase
+
+Undo changes by the "loser" transactions (hasn't committed when crash) in reverse order.
+
+##Distrubuted Database
+
+###Distributed Joins
+
+Strategies:
+
+- Compute and fetch as needed
+- Ship to one site and evaluate join locally
+- **Semijoin**: ship just columns that will be used (do projection before shipping) (cost of projection vs. shipping entire relation)
+- **Bloomjoin**: compute a bit-vector of some size k (by hashing the join attribute values in place A into range 0 to k-1, and setting bit I to 1 if any tuple hashes to I) (so called Bloom Filter), ship the vector  to another place, hash attribute values there in the same way, discard tuples that hash to 0 in the bit-vector shipped from A, and only ship the rest part to A
+
+###Two Phase Commit
+
+Every node is either a **Coordinator** or **Subordinate**.
+
+####Phase 1: Voting
+
+1. Coordinator sends prepare message to each subordinate, then wait for response
+2. Each subordinate decides to commit or abort, and sends yes or no back to coordinator
+
+####Phase 2: Termination
+
+1. Coordinator receives response, if all yes, send commit message to subordinates; if any no, send abort message to subordinates. Then wait for ACKs
+2. If subordinate receives commit message, commit its portion of the transaction, and send ACK to coordinator; similar for aborting
