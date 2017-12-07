@@ -68,7 +68,7 @@ Table `Enrolled` now refers to `Students` by the foreign key. If the primary key
 
 ```sql
 // basic query
-// "DISTINCT" is used eliminate duplicates; this is not done by default
+// "DISTINCT" is used to eliminate duplicates; this is not done by default
 // return names of sailors that have boat NO.101:
 SELECT DISTINCT S.sname
 FROM Sailors S, Reserves R
@@ -124,7 +124,7 @@ SELECT *FROM   SailorsSWHERE  S.rating > ALL (SELECT S2.rating					   FROM Sa
 // GROUP BY... HAVING ..., which is executed after (SELECT ... FROM ... WHERE...) is done
 // outputs one answer for each group
 // attributes after SELECT must either be aggregate operations, or appear also after GROUP BY
-// i.e. it must be one-column or will be grouped to be one-column
+// i.e. it must be one-row or will be grouped to be one-row for each group
 // attributes after HAVING must have a single value per qualifying group
 // EVERY applies to each row and helps to filter out an entire group
 SELECT   S.rating, MIN(S.salary) 
@@ -499,7 +499,7 @@ If F is FDs of R, and X is a subset of attributes of R, then Fx means FDs where 
 
 **((Fx ∪ Fy)+) = (F+)**
 
-In that case, when a record is inserted, we just have ti check Fx in X, and Fy in Y respectively, without a join.
+In that case, when a record is inserted, we just have to check Fx in X, and Fy in Y respectively, without a join.
 
 ###Boyce-Codd Normal Form (BCNF)
 
@@ -691,7 +691,7 @@ For a B+ tree, that means we should not only lock the data entry. The easiest wa
 
 Instead, when we move to high level nodes of the tree, we can realease nodes near to the root, though it violates 2PL. 
 
-For insert, simply release the lock on the parent when we reach the child. For insert and delete, what we have to find is the **safe node**: changes will not **propagate up beyond** this node. All locks on its ancestor can be released.
+For search, simply release the lock on the parent when we reach the child. For insert and delete, what we have to find is the **safe node**: changes will not **propagate up beyond** this node. All locks on its ancestor can be released.
 
 Requirement for safe node:
 
@@ -838,7 +838,7 @@ Recovers the transaction table and dirty page table by:
 
 - For "End" record, remove transaction from the transaction table
 - For "Update" record, if page is not in dirty page table, add it and set recLSN = LSN
-- For other records, add trasaction to transaction table, set lastLSN = LSN, and change status if commit
+- For other records, add transaction to transaction table, set lastLSN = LSN, and change status if commit
 
 to determine:
 
@@ -850,7 +850,7 @@ to determine:
 
 Starts from the smallest recLSN:
 
-- Redo updates (**including those abort**), and set pageLSN = LSN without other logging
+- Redo updates (**including those abort**), and set pageLSN = LSN without other logging (**Every** update in this stage will be written to the disk, and the pageLSN will be changed, so that the redo will not be applied twice to the same page)
 - Redo CLRs
 
 Conditions where not need to redo an action:
@@ -858,6 +858,8 @@ Conditions where not need to redo an action:
 - Page is not in dirty page table (updated but has been written to disk between begin and end checkpoints)
 - Page is in dirty page table, but its LSN < recLSN
 - Page is in dirty page table, but its LSN <= pageLSN in DB (frame stolen by other transactions)
+
+Note that commit only means that the log entry rather than the data is persistent, and after the redo phase, the restored data will be persistent.
 
 #####UNDO Phase
 
@@ -871,7 +873,7 @@ Strategies:
 
 - Compute and fetch as needed
 - Ship to one site and evaluate join locally
-- **Semijoin**: ship just columns that will be used (do projection before shipping) (cost of projection vs. shipping entire relation)
+- **Semijoin**: from A, ship columns that will be used in the join to place B, find out qualifying tuples in B, send them back to A, and do the real join in A
 - **Bloomjoin**: compute a bit-vector of some size k (by hashing the join attribute values in place A into range 0 to k-1, and setting bit I to 1 if any tuple hashes to I) (so called Bloom Filter), ship the vector  to another place, hash attribute values there in the same way, discard tuples that hash to 0 in the bit-vector shipped from A, and only ship the rest part to A
 
 ###Two Phase Commit
@@ -887,3 +889,73 @@ Every node is either a **Coordinator** or **Subordinate**.
 
 1. Coordinator receives response, if all yes, send commit message to subordinates; if any no, send abort message to subordinates. Then wait for ACKs
 2. If subordinate receives commit message, commit its portion of the transaction, and send ACK to coordinator; similar for aborting
+
+###Eventual Consistency
+
+When data is replicated and stored in different nodes, after one update in one node, it is possible that the update hasn't been propogated to all other nodes. Things get even worse if the system gets partitioned due to network failures.
+
+If we just block the user from other operations during the propogation, the **availability** is decreased; if we allow users to access the data before the propogation finishes, the **consistency** is decreased.
+
+A fundamental tradeoff between **consistency**, **availability** and **partition tolerance** (CAP thorem):
+
+![](http://os9hogvk5.bkt.clouddn.com/28_1.jpg)
+
+We define these parameters:
+
+- **N**: How many copies of the data are stored
+- **R**: How many replicas are checked during a read
+- **W**: How many replicas must have been written to
+
+For eventual consistency, we just require that all replicas get back into sync **eventually**. Before that, if:
+
+- **W + R > N**: strong consistency (read and write set always overlap)
+- **W = N, R = 1**: fastest reads (slowing in writes)
+- **W = 1, R = N**: fastest writes (slow in reads)
+- **W=Q, R=Q where Q = N / 2 + 1**: "Quorum"
+
+Eventual consistency is a weak consistency, because after an update completes, not all subsequent access returns updated value. That's why we read several replicas, gather the result, and select the latest updated one.
+
+Amazon's Dynamo system is such a system. Multiple versions are stored, and they will be reconciled at read time rather than the write time, because Amazon care more about the efficiency of the write.
+
+**Vector clocks** are used to track versions. Each of them is a vector, where each element is a counter that tells how many times the data stored at a specific node has been modified. If all counters of a vector clock <= all corresponding counters of another vector clock, the version associated with the former clock is an ancestor of the latter one, and can be simply forgot.
+
+##NewSQL
+
+###C-Store
+
+Store data in **column-wise** order. Better for the case that each tuple has a lot of attributes, but we only care about a little amount of them when we do the query.
+
+**Compression** is easier, since adjacent data are of the same type. We can used the space saved by compression to some redundencies. For example, we can store a copy sorted by age, and another copy sorted by salary, so that the query might be faster.
+
+Need to maintain **join indices** to allow reconstructing a tuple if needed. The storage key of an entry in a projection is just its position, rather than the value of the key.
+
+###H-Store
+
+In Online Transaction Processing (**OLTP**) workloads, we have observations (assumptions):
+
+1. Operate on small datasets
+2. Main memory is larger
+3. Transactions are short
+4. The type of transanctions are known before execution starts
+5. Multi-mode system
+
+Design decisions:
+
+- Store all data in main memory (1, 2)
+- No concurrency control since no motivation (1, 2, 3)
+- Optimization before runtime (4)
+- Replicas in different nodes to support recovery in case of node crash and data in main memory gets lost (2, 5)
+
+###Google Spanner
+
+Serializability just means that the schedule is equivalent to a certain serial schedule, while Google spanner guarentees that transactions are execured precisely in the order they are submitted (or say order of arrival).
+
+###Map Reduce
+
+A processing model for parallel programming:
+
+1. Iterate over a large number of records stored in different nodes in parallel
+2. **Map**: Extract something of interest from each
+3. Bring together intermediate results
+4. **Reduce**: Aggregate intermediate results, also in parallel
+5. Generate final output
