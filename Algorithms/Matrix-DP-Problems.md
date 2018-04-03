@@ -105,3 +105,5 @@ class NumMatrix:
 ```
 
 dp[i][j] is the sum of all elements of the submatrix whose top left is matrix[0][0], and bottom right is matrix[i-1][j-1].
+
+If the matrix is **mutable**, store **row sum** (i.e. sum(matrix[i][:j])) in each grid instead.
