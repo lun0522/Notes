@@ -1,6 +1,6 @@
-#Sliding Window Problems
+# Sliding Window Problems
 
-###340. Longest Substring with At Most K Distinct Characters
+### 340. Longest Substring with At Most K Distinct Characters
 
 Given a string, find the length of the longest substring T that contains at most k distinct characters.
 
@@ -35,7 +35,7 @@ class Solution:
         return ret
 ```
 
-###683. K Empty Slots
+### 683. K Empty Slots
 
 There is a garden with **N** slots. In each slot, there is a flower. The **N** flowers will bloom one by one in **N** days. In each day, there will be **exactly** one flower blooming and it will be in the status of blooming since then.
 

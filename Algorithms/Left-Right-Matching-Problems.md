@@ -1,8 +1,8 @@
-#Left-Right Matching Problems
+# Left-Right Matching Problems
 
 **Be careful about when to exit the recursive call, and what to return!**
 
-###394. Decode String
+### 394. Decode String
 
 Given an encoded string, return it's decoded string.
 
@@ -21,31 +21,26 @@ Examples:
 > s = "2[abc]3[cd]ef", return "abcabccdcdcdef".
 
 ```python
-class Solution:
-    def decode(self, s, ptr):
-        ret = []
-        while ptr <= len(s):
-            if ptr == len(s) or s[ptr] == "]":
-                return "".join(ret), ptr
-            elif 1 <= ord(s[ptr]) - ord("0") <= 9:
-                bra = ptr + 1
-                while s[bra] != "[":
-                    bra += 1
-                repeat = int(s[ptr: bra])
-                segment, ketPtr = self.decode(s, bra + 1)
-                for _ in range(repeat):
-                    ret.append(segment)
-                ptr = ketPtr + 1
-            else:
-                ret.append(s[ptr])
-                ptr += 1
-    
+class Solution(object):
     def decodeString(self, s):
         """
         :type s: str
         :rtype: str
         """
-        return self.decode(s, 0)[0]
+        def decode(ptr):
+            ret = []
+            while ptr < len(s) and s[ptr] != "]":  
+                if s[ptr].isdigit():
+                    bra = s.find("[", ptr)
+                    repeat = int(s[ptr: bra])
+                    segment, ptr = decode(bra + 1)
+                    ret.append(segment * repeat)
+                else:
+                    ret.append(s[ptr])
+                    ptr += 1
+            return "".join(ret), ptr + 1
+        
+        return decode(0)[0]
 ```
 
 - If the entire string has been scanned, or encounter a **]**, return what we have got in `ret`, and the pointer that points outside of the string or to the **]**. The function waiting on the stack can continue scanning after this **]** (consider **"3[a]2[bc]"**, after dealing with **3[a]**, return **aaa**, and restart from **2**)
@@ -55,7 +50,7 @@ class Solution:
 - If encounter a alphabetic character, simply append to `ret` (consider the **a** in **"3[a2[c]]"**)
 
 
-###20. Valid Parentheses
+### 20. Valid Parentheses
 
 Given a string containing just the characters **'('**, **')'**, **'{'**, **'}'**, **'['** and **']'**, determine if the input string is valid.
 
@@ -87,3 +82,26 @@ class Solution(object):
 Each function call only validates one pair of parentheses. After it knows the left parenthese (**(** or **[** or **{**), it will know what should it expect for, and store it in `waitFor`. After the recursive call, the returned index must point to a character that equals to `waitFor`. Then go on to check the following part. (consider **[()()]**)
 
 Pay attention to the outmost function call. There we don't have `waitFor`, and thus we require that the returned index must point outside of the string. (consider **]**)
+
+An easier way:
+
+```python
+class Solution:
+    def isValid(self, s):
+        """
+        :type s: str
+        :rtype: bool
+        """
+        stack = []
+        left, right = "([{", ")]}"
+        for c in s:
+            if c in left:
+                stack.append(c)
+            elif c in right:
+                match = left[right.index(c)]
+                if not stack or stack[-1] != match:
+                    return False
+                else:
+                    stack.pop()
+        return not stack
+```

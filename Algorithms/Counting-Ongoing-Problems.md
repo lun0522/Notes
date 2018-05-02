@@ -1,6 +1,6 @@
-#Counting Ongoing Problems
+# Counting Ongoing Problems
 
-###253. Meeting Rooms II
+### 253. Meeting Rooms II
 
 Given an array of meeting time intervals consisting of start and end times **[[s1,e1],[s2,e2],...]** (si < ei), find the minimum number of conference rooms required.
 
@@ -38,7 +38,7 @@ class Solution(object):
 ```
 
 
-###218. The Skyline Problem
+### 218. The Skyline Problem
 
 A city's skyline is the outer contour of the silhouette formed by all the buildings in that city when viewed from a distance. Now suppose you are given the locations and height of all the buildings as shown on a cityscape photo (Figure A), write a program to output the skyline formed by these buildings collectively (Figure B).
 

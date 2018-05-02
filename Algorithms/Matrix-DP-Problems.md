@@ -1,6 +1,6 @@
-#Matrix DP Problems
+# Matrix DP Problems
 
-###221. Maximal Square
+### 221. Maximal Square
 
 Given a 2D binary matrix filled with 0's and 1's, find the largest square containing only 1's and return its area.
 
@@ -38,7 +38,7 @@ class Solution:
 
 dp[i][j] is the side length of the largest square whose **bottom right** is at matrix[i-1][j-1]. To renew dp[i][j], we only need dp[i-1][j-1], dp[i-1][j] and dp[i][j-1] i.e. left top, top and left element.
 
-###304. Range Sum Query 2D - Immutable
+### 304. Range Sum Query 2D - Immutable
 
 Given a 2D matrix matrix, find the sum of the elements inside the rectangle defined by its upper left corner (row1, col1) and lower right corner (row2, col2).
 
