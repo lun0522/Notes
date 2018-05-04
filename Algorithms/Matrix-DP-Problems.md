@@ -7,11 +7,11 @@ Given a 2D binary matrix filled with 0's and 1's, find the largest square contai
 For example, given the following matrix:
 
 >1 0 1 0 0
-
+>
 >1 0 **1 1** 1
-
+>
 >1 1 **1 1** 1
-
+>
 >1 0 0 1 0
 
 Return 4.
@@ -49,13 +49,13 @@ The above rectangle (with the red border) is defined by (row1, col1) = **(2, 1)*
 Example:
 
 >[3, 0, 1, 4, 2],
-  
+>
 >[5, 6, 3, 2, 1],
-  
+> 
 >[1, 2, 0, 1, 5],
-  
+> 
 >[4, 1, 0, 1, 7],
-  
+> 
 >[1, 0, 3, 0, 5]
 
 sumRegion(2, 1, 4, 3) -> 8

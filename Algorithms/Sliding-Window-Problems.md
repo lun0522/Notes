@@ -48,28 +48,29 @@ Also given an integer **k**, you need to output in which day there exists two fl
 If there isn't such day, output -1.
 
 Example 1:
+
+> Input: 
 >
-Input: 
+> flowers: [1,3,2]
 >
-flowers: [1,3,2]
+> k: 1
 >
-k: 1
->
-Output: 2
->
+> Output: 2
+
 Explanation: In the second day, the first and the third flower have become blooming.
 
 Example 2:
+
+> Input: 
 >
-Input: 
+> flowers: [1,2,3]
 >
-flowers: [1,2,3]
+> k: 1
 >
-k: 1
->
-Output: -1
+> Output: -1
 
 Note:
+
 The given array will be in the range [1, 20000].
 
 ```python
