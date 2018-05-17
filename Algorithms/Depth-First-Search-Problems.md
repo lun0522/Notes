@@ -82,3 +82,59 @@ class Solution:
 ```
 
 A lookup table is built to store prerequisites. For example, before jumping from 1 to 3, we must have visited 2 before, so `lookup[(1, 3)] = lookup[(3, 1)] = 2`. An improvement is to just start from 1, 2, and 5. Because of symmetry, starting from 3, 7, 9 is the same to starting from 1; similar for 2.
+
+### 294. Flip Game II
+
+You are playing the following Flip Game with your friend: Given a string that contains only these two characters: **+** and **-**, you and your friend take turns to flip two **consecutive** **"++"** into **"--"**. The game ends when a person can no longer make a move and therefore the other person will be the winner.
+
+Write a function to determine if the starting player can guarantee a win.
+
+Example:
+
+> Input: s = "++++"
+> 
+> Output: true 
+
+Explanation: The starting player can guarantee a win by flipping the middle "++" to become "+--+".
+
+```python
+class Solution:
+    def canWin(self, s):
+        """
+        :type s: str
+        :rtype: bool
+        """
+        anyWin, allLose = set(), set()
+        
+        def flip(chars):  # generate all possible moves
+            ret = []
+            for i in range(1, len(chars)):
+                if chars[i - 1] == "+" and chars[i] == "+":
+                    tmp = chars[:]
+                    tmp[i - 1] = tmp[i] = "-"
+                    ret.append(tmp)
+            return ret
+        
+        def play(chars):  # return True if any win, False if all lose
+            for c in flip(chars):
+                tc = tuple(c)
+                if tc in anyWin:
+                    return True
+                elif tc in allLose:
+                    continue
+                else:  # let second player play
+                    if play(c):
+                        allLose.add(tc)
+                    else:
+                        anyWin.add(tc)
+                        return True
+            return False
+        
+        return play(list(s))
+```
+
+The helper function `flip` generates all possible moves. If it returns nothing, then the current player will lose (no possible move can be made).
+
+Suppose A is the first player, and B is the second player. For A, if after a certain move made by A, any move made by B will guarantee B a lose, then A will win. We may have two functions: `firstPlayer()` and `secondPlayer()`, each of which returns `True` if that player has chance to win, or `False` if that player will certainly lose.
+
+They will call each other, and if after any move made by the current player, another player can never win, then the current player can guarantee a win. These two functions have exactly the reverse logic, so they are merged into `play()`. `anyWin` and `allLose` are used to avoid duplicated computations.
