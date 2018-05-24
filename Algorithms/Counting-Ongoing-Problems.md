@@ -18,7 +18,7 @@ class Solution(object):
         :rtype: int
         """
         # sort intervals according to the starting time
-        intervals.sort(cmp=lambda a, b: a.start - b.start)
+        intervals.sort(key=lambda x: x.start)
         curMeeting = []  # only store the ending time
         curRoom = maxRoom = 0
         

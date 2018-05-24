@@ -66,6 +66,11 @@ class Solution:
         numLands = [0]
         ret = []
         
+        def add(pos):
+            parent[pos] = pos
+            size[pos] = 1
+            numLands[0] += 1  # do not forget this
+        
         def root(pos):
             while pos != parent[pos]:
                 # path compression
@@ -74,11 +79,6 @@ class Solution:
                 parent[pos] = parent[parent[pos]]
                 pos = parent[pos]
             return pos
-        
-        def add(pos):
-            parent[pos] = pos
-            size[pos] = 1
-            numLands[0] += 1  # do not forget this
         
         def find(pos1, pos2):
             return root(pos1) == root(pos2)
