@@ -10,15 +10,15 @@ However, there is a non-negative cooling interval **n** that means between two *
 
 You need to return the **least** number of intervals the CPU will take to finish all the given tasks.
 
-Example 1:
+**Example 1:**
 
-> Input: tasks = ["A","A","A","B","B","B"], n = 2
+> **Input:** tasks = ["A","A","A","B","B","B"], n = 2
 > 
-> Output: 8
+> **Output:** 8
+> 
+> **Explanation:** A -> B -> idle -> A -> B -> idle -> A -> B.
 
-Explanation: A -> B -> idle -> A -> B -> idle -> A -> B.
-
-Note:
+**Note:**
 
 1. The number of tasks is in the range [1, 10000].
 2. The integer n is in the range [0, 100].
@@ -77,13 +77,13 @@ Now, we add **K** more gas stations so that **D**, the maximum distance between 
 
 Return the smallest possible value of **D**.
 
-Example:
+**Example:**
 
-> Input: stations = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], K = 9
+> **Input:** stations = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], K = 9
 > 
-> Output: 0.500000
+> **Output:** 0.500000
 
-Note:
+**Note:**
 
 1. **stations.length** will be an integer in range **[10, 2000]**.
 2. **stations[i]** will be an integer in range **[0, 10^8]**.

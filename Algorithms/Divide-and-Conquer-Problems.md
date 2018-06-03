@@ -22,17 +22,17 @@ Consider the following matrix:
 > 
 > ]
 
-Example 1:
+**Example 1:**
 
-> Input: matrix, target = 5
+> **Input:** matrix, target = 5
 > 
-> Output: true
+> **Output:** true
 
-Example 2:
+**Example 2:**
 
-> Input: matrix, target = 20
+> **Input:** matrix, target = 20
 > 
-> Output: false
+> **Output:** false
 
 ```python
 class Solution:

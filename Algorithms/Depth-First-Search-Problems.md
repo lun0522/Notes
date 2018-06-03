@@ -13,7 +13,7 @@ Rules for a valid pattern:
 3. If the line connecting two consecutive keys in the pattern passes through any other keys, the other keys must have previously selected in the pattern. No jumps through non selected key is allowed.
 4. The order of keys used matters.
 
-Explanation:
+**Explanation:**
 
 > | 1 | 2 | 3 |
 > 
@@ -37,7 +37,7 @@ Valid move: **6 - 5 - 4 - 1 - 9 - 2**
 
 Line 1 - 9 is valid because it passes through key 5, which had been selected in the pattern.
 
-Example:
+**Example:**
 
 Given **m** = 1, **n** = 1, return 9.
 
@@ -89,13 +89,13 @@ You are playing the following Flip Game with your friend: Given a string that co
 
 Write a function to determine if the starting player can guarantee a win.
 
-Example:
+**Example:**
 
-> Input: s = "++++"
+> **Input:** s = "++++"
 > 
-> Output: true 
-
-Explanation: The starting player can guarantee a win by flipping the middle "++" to become "+--+".
+> **Output:** true 
+> 
+> **Explanation:** The starting player can guarantee a win by flipping the middle "++" to become "+--+".
 
 ```python
 class Solution:

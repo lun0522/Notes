@@ -8,19 +8,19 @@ Compute and return the square root of x, where x is guaranteed to be a non-negat
 
 Since the return type is an integer, the decimal digits are truncated and only the integer part of the result is returned.
 
-Example 1:
+**Example 1:**
 
-> Input: 4
+> **Input:** 4
 > 
-> Output: 2
+> **Output:** 2
 
-Example 2:
+**Example 2:**
 
-> Input: 8
+> **Input:** 8
 > 
-> Output: 2
+> **Output:** 2
 > 
-> Explanation: The square root of 8 is 2.82842..., and since the decimal part is truncated, 2 is returned.
+> **Explanation:** The square root of 8 is 2.82842..., and since the decimal part is truncated, 2 is returned.
 
 ```python
 class Solution:
@@ -57,29 +57,29 @@ Given a sorted array and a target value, return the index if the target is found
 
 You may assume no duplicates in the array.
 
-Example 1:
+**Example 1:**
 
-> Input: [1,3,5,6], 5
+> **Input:** [1,3,5,6], 5
 > 
-> Output: 2
+> **Output:** 2
 
-Example 2:
+**Example 2:**
 
-> Input: [1,3,5,6], 2
+> **Input:** [1,3,5,6], 2
 > 
-> Output: 1
+> **Output:** 1
 
-Example 3:
+**Example 3:**
 
-> Input: [1,3,5,6], 7
+> **Input:** [1,3,5,6], 7
 > 
-> Output: 4
+> **Output:** 4
 
-Example 4:
+**Example 4:**
 
-> Input: [1,3,5,6], 0
+> **Input:** [1,3,5,6], 0
 > 
-> Output: 0
+> **Output:** 0
 
 ```python
 class Solution:

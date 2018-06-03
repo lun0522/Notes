@@ -4,9 +4,7 @@
 
 Given an array of meeting time intervals consisting of start and end times **[[s1,e1],[s2,e2],...]** (si < ei), find the minimum number of conference rooms required.
 
-For example,
-Given **[[0, 30],[5, 10],[15, 20]]**,
-return **2**.
+For example, Given **[[0, 30],[5, 10],[15, 20]]**, return **2**.
 
 ```python
 from heapq import *
@@ -52,7 +50,7 @@ The output is a list of "key points" (red dots in Figure B) in the format of **[
 
 For instance, the skyline in Figure B should be represented as:**[ [2 10], [3 15], [7 12], [12 0], [15 10], [20 8], [24, 0] ]**.
 
-Notes:
+**Notes:**
 
 - The number of buildings in any input list is guaranteed to be in the range **[0, 10000]**.
 - The input list is already sorted in ascending order by the left x position **Li**.

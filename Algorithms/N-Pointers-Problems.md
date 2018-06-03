@@ -8,11 +8,11 @@ Given **n** non-negative integers representing an elevation map where the width 
 
 The above elevation map is represented by array [0,1,0,2,1,0,1,3,2,1,2,1]. In this case, 6 units of rain water (blue section) are being trapped.
 
-Example:
+**Example:**
 
-> Input: [0,1,0,2,1,0,1,3,2,1,2,1]
+> **Input:** [0,1,0,2,1,0,1,3,2,1,2,1]
 > 
-> Output: 6
+> **Output:** 6
 
 ```python
 class Solution:
@@ -53,13 +53,13 @@ You have **k** lists of sorted integers in ascending order. Find the **smallest*
 
 We define the range [a,b] is smaller than range [c,d] if **b-a < d-c** or **a < c** if **b-a == d-c**.
 
-Example 1:
+**Example:**
 
-> Input:[[4,10,15,24,26], [0,9,12,20], [5,18,22,30]]
+> **Input:**[[4,10,15,24,26], [0,9,12,20], [5,18,22,30]]
 > 
-> Output: [20,24]
+> **Output:** [20,24]
 > 
-> Explanation: 
+> **Explanation:**
 > 
 > List 1: [4, 10, 15, 24,26], 24 is in range [20,24].
 > 
@@ -67,7 +67,7 @@ Example 1:
 > 
 > List 3: [5, 18, 22, 30], 22 is in range [20,24].
 
-Note:
+**Note:**
 
 1. The given list may contain duplicates, so ascending order means >= here.
 2. 1 <= k <= 3500
@@ -107,17 +107,17 @@ The example input is **[[4,10,15,24,26], [0,9,12,20], [5,18,22,30]]**. Rewrite i
 
 |   |   |   |   |    |    |    |    |    |    |    |    |    |
 |---|---|---|---|----|----|----|----|----|----|----|----|----|
-|   | 4 |   |   | 10 |    | 15 |    |    |    | 24 | 26 |    |
-| 0 |   |   | 9 |    | 12 |    |    | 20 |    |    |    |    |
-|   |   | 5 |   |    |    |    | 18 |    | 22 |    |    | 30 |
+|   | **4** |   |   | 10 |    | 15 |    |    |    | 24 | 26 |    |
+| **0** |   |   | 9 |    | 12 |    |    | 20 |    |    |    |    |
+|   |   | **5** |   |    |    |    | 18 |    | 22 |    |    | 30 |
 
 For example, if we want to build a range from 9, we only care about  numbers that are equal to or greater than 9:
 
 |   |    |    |    |    |    |    |    |    |    |
 |---|----|----|----|----|----|----|----|----|----|
-|   | 10 |    | 15 |    |    |    | 24 | 26 |    |
-| 9 |    | 12 |    |    | 20 |    |    |    |    |
-|   |    |    |    | 18 |    | 22 |    |    | 30 |
+|   | **10** |    | 15 |    |    |    | 24 | 26 |    |
+| **9** |    | 12 |    |    | 20 |    |    |    |    |
+|   |    |    |    | **18** |    | 22 |    |    | 30 |
 
 9 belongs to the second list. We just need to find the smallest numbers in the first and the third lists in this cropped table, which are 10 and 18, and use the larger one as the end of the range, so finally we have range [9, 18].
 
