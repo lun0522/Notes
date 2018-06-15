@@ -46,6 +46,45 @@ Otherwise, if the current bar is lower the previous one, for example, we encount
 
 Note that if two adjacent bars have the same height, only the first  matters, so we do nothing when `h == stack[-1][1]`. When we record a decreasing element, the rectangle of the same height can actually start from the leftmost bar that is higher than or equal to it. For example, a rectangle of height **2** can start from the bar **5**. So, when we record it, we **"inherit" the index** from the last popped out bar. That bar may have the same height as the current bar (*e.g.* **[0,2,5,6,2,0]**), in which case we don't have to record the current one.
 
+### 316. Remove Duplicate Letters
+
+Given a string which contains only lowercase letters, remove duplicate letters so that every letter appear once and only once. You must make sure your result is the smallest in lexicographical order among all possible results.
+
+**Example 1:**
+
+> **Input:** "bcabc"
+> 
+> **Output:** "abc"
+
+**Example 2:**
+
+> **Input:** "cbacdcbc"
+> 
+> **Output:** "acdb"
+
+```python
+class Solution:
+    def removeDuplicateLetters(self, s):
+        """
+        :type s: str
+        :rtype: str
+        """
+        rightIdx = {char: idx for idx, char in enumerate(s)}
+        stack, seen = [], set()
+        for idx, char in enumerate(s):
+            if char not in seen:
+                while stack and stack[-1] >= char and rightIdx[stack[-1]] > idx - 1:
+                    seen.remove(stack.pop())
+                stack.append(char)
+                seen.add(char)
+        return "".join(stack)
+```
+
+"Lexicographical" means we should keep characters in ascending order as much as we can. One thing we may want to do is to keep a monotone increasing stack: before pushing the next character to the stack, pop out all those characters that are greater than it. However, here we have to make sure every character appears ones, which means:
+
+- If we have seen a character and put it in the stack before, later if we encounter the same character, there is no need to consider it. We use `seen` to keep track of this.
+- If we want to pop a character out, but later we will not meet this character again, then we cannot remove it. We use `rightIdx` to record the rightmost appearance of each character.
+
 ### 239. Sliding Window Maximum
 
 Given an array nums, there is a sliding window of size **k** which is moving from the very left of the array to the very right. You can only see the **k** numbers in the window. Each time the sliding window moves right by one position. Return the max sliding window.

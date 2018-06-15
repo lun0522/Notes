@@ -138,3 +138,105 @@ The helper function `flip` generates all possible moves. If it returns nothing, 
 Suppose A is the first player, and B is the second player. For A, if after a certain move made by A, any move made by B will guarantee B a lose, then A will win. We may have two functions: `firstPlayer()` and `secondPlayer()`, each of which returns `True` if that player has chance to win, or `False` if that player will certainly lose.
 
 They will call each other, and if after any move made by the current player, another player can never win, then the current player can guarantee a win. These two functions have exactly the reverse logic, so they are merged into `play()`. `anyWin` and `allLose` are used to avoid duplicated computations.
+
+### 10. Regular Expression Matching
+
+Given an input string (**s**) and a pattern (**p**), implement regular expression matching with support for **'.'** and **'\*'**.
+
+> '.' Matches any single character.
+> 
+> '*' Matches zero or more of the preceding element.
+
+The matching should cover the **entire** input string (not partial).
+
+**Note:**
+
+- **s** could be empty and contains only lowercase letters **a-z**.
+- **p** could be empty and contains only lowercase letters **a-z**, and characters like **.** or **\***.
+
+**Example 1:**
+
+> **Input:**
+> 
+> s = "aa"
+> 
+> p = "a"
+> 
+> **Output:** false
+> 
+> **Explanation:** "a" does not match the entire string "aa".
+
+**Example 2:**
+
+> **Input:**
+> 
+> s = "aa"
+> 
+> p = "a\*"
+> 
+> **Output:** true
+> 
+> **Explanation:** '*' means zero or more of the precedeng element, 'a'. Therefore, by repeating 'a' once, it becomes "aa".
+
+**Example 3:**
+
+> **Input:**
+> 
+> s = "ab"
+> 
+> p = ".\*"
+> 
+> **Output:** true
+> 
+> **Explanation:** ".\*" means "zero or more (*) of any character (.)".
+
+**Example 4:**
+
+> **Input:**
+> 
+> s = "aab"
+> 
+> p = "c\*a\*b"
+> 
+> **Output:** true
+> 
+> **Explanation:** c can be repeated 0 times, a can be repeated 1 time. Therefore it matches "aab".
+
+**Example 5:**
+
+> **Input:**
+> 
+> s = "mississippi"
+> 
+> p = "mis\*is\*p\*."
+> 
+> **Output:** false
+
+```python
+class Solution:
+    def isMatch(self, s, p):
+        """
+        :type s: str
+        :type p: str
+        :rtype: bool
+        """
+        memory = {}
+        def dfs(sPtr, pPtr):
+            if (sPtr, pPtr) not in memory:
+                if pPtr == len(p):  # 1
+                    ret = sPtr == len(s)
+                else:
+                    match = sPtr < len(s) and p[pPtr] in {".", s[sPtr]}
+                    if pPtr + 1 < len(p) and p[pPtr + 1] == "*":  # 2
+                        ret = dfs(sPtr, pPtr + 2) or (match and dfs(sPtr + 1, pPtr))
+                    else:  # 3
+                        ret = match and dfs(sPtr + 1, pPtr + 1)
+                memory[sPtr, pPtr] = ret
+            return memory[sPtr, pPtr]
+        
+        return dfs(0, 0)
+```
+
+1. If `p` is used up, `s` may not have ended: `ret = sPtr == len(s)`.
+2. If there is a **\***, we **may** be able to skip chars in `s`. We can choose not to skip anything in `s`: `dfs(sPtr, pPtr + 2)`. If that didn't success, and `s[sPtr]` matches `p[pPtr]`, we can skip one char in `s`: `match and dfs(sPtr + 1, pPtr)`. Later recursive calls will skip more chars.
+3. If there isn't a **\***, we may move both `sPtr` and `pPtr` forward if `s[sPtr]` matches `p[pPtr]`: `ret = match and dfs(sPtr + 1, pPtr + 1)`.
