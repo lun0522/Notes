@@ -117,3 +117,22 @@ Some `class` and `struct` are Plain Old Data types, which don't have user-define
 To optimize the memory usage of `struct`, we can reorder elements in it to reduce the memory waste caused by alignments. Readability is usually considered more important than this improvement.
 
 Prefer `enum class` to plain `enum`. For `enum class`, enumerators are in the scope (namespace) of `enum class`, and they cannot be implicitly converted to other types (eg: `int`) unless we use `static_cast`. We can specify the underlying data type: `enum class Color : char { red, green, blue };`
+
+## Chapter 9 Statements
+
+To avoid a misuse of a variable, we can initialize a variable in the condition of `if`:
+
+```cpp
+if (double d = 3.0) {  // value of d is converted to boolean
+    // do something
+} else {
+    // d is also valid in this branch
+}
+```
+
+To make the range-based `for` loop (eg: `for (int x : v)`) work on a custom class `T`, we can either:
+
+1. define `T::begin()` and `T::end()`, or
+2. define `begin(&T)` and `end(&T)` in the enclosing scope (same namespace)
+
+and overload the prefix operator `++` for the iterator if necessary. We can use `std::begin()` and `std::end()` to retrieve iterators of builtin arrays and STL containers.
