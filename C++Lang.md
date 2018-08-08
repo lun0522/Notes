@@ -109,3 +109,11 @@ string&& rc3 {func()};  // ok
 string s2 = static_cast<string&&>(rc2);  // rc2 will be destructed
 string s3 = move(rc2);  // equivalent to static_cast
 ```
+
+## Chapter 8 Structures, Unions, and Enumerations
+
+Some `class` and `struct` are Plain Old Data types, which don't have user-defined constructors, destructors or virtual member functions. They are stored in contiguous sequence of bytes, so we can simply use `memcpy` to copy an array of them. We can use `is_pod` to predicate whether a type is POD.
+
+To optimize the memory usage of `struct`, we can reorder elements in it to reduce the memory waste caused by alignments. Readability is usually considered more important than this improvement.
+
+Prefer `enum class` to plain `enum`. For `enum class`, enumerators are in the scope (namespace) of `enum class`, and they cannot be implicitly converted to other types (eg: `int`) unless we use `static_cast`. We can specify the underlying data type: `enum class Color : char { red, green, blue };`
