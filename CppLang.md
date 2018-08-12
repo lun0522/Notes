@@ -136,3 +136,45 @@ To make the range-based `for` loop (eg: `for (int x : v)`) work on a custom clas
 2. define `begin(&T)` and `end(&T)` in the enclosing scope (same namespace)
 
 and overload the prefix operator `++` for the iterator if necessary. We can use `std::begin()` and `std::end()` to retrieve iterators of builtin arrays and STL containers.
+
+## Chapter 10 Expressions
+
+If a temporary object is not bound to a `const` lvalue reference or used to initialize a named object, it will be destroyed at the end of the full expression:
+
+```cpp
+string s1 {"hello"};
+string s2 {"world"};
+size_t length = strlen((s1 + s2).c_str()); // ok
+const char* cs = (s1 + s2).c_str(); // using cs may cause error
+```
+
+`constexpr` must be of literal types (including integral, float-point, enumerator and arrays of them). We may use functions with `constexpr` return type to initialize it:
+
+```cpp
+constexpr int add(int x, int y) { return x + y; }
+const int a = 1, b = 2;
+constexpr int c = add(a, b);
+```
+
+Note that parameter types of `add` cannot be `constexpr`. Removing `constexpr`/`const` in the declaration of `add` or `a` and `b` will cause error. We can also use references with `constexpr` as long as the referenced object is constant:
+
+```cpp
+constexpr int minus(const int& x, const int& y) { return x - y; }
+const int a = 1, b = 2;
+constexpr int c = minus(a, b);
+```
+
+String literals are allocated on the staic memory, so:
+
+```cpp
+void f() {
+    constexpr const char* p1 = "hello"; // ok
+    constexpr const char* p2 = new char(5); // error, it is allocated on the free store
+    static const char a[] = "world";
+    constexpr const char* p3 = a; // ok
+}
+```
+
+Some user-defined types are also literal types. Their constructors may have `constexpr` for the return type. See the standard for the requirement of literal types.
+
+When considering conversions between numerical values, use `numeric_limits` to get the max representable number of a type, and use `{}` for initialization to prevent narrowing.
