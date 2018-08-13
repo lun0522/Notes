@@ -28,6 +28,19 @@ void f() {
 }
 ```
 
+A variable declared after a `case` label within `switch (...) {}` can be seen in all other `case` labels after its declaration, so we have to add curly braces to set the scope, otherwise the compiler will say the initialization of it is bypassed in later `case` labels:
+
+```cpp
+switch (...) {
+   case ...:
+       auto u = ...;
+       break;
+   case ...:
+       // u can still be seen here and it is not initialized!
+}
+
+```
+
 Local variables (excluding global, namespace, `static`, etc) of built-in types are **not** initialized to `{}`:
 
 ```cpp
@@ -178,3 +191,150 @@ void f() {
 Some user-defined types are also literal types. Their constructors may have `constexpr` for the return type. See the standard for the requirement of literal types.
 
 When considering conversions between numerical values, use `numeric_limits` to get the max representable number of a type, and use `{}` for initialization to prevent narrowing.
+
+## Chapter 11 Select Operations
+
+A branch of the ternary expression can throw an exception:
+
+```cpp
+int i = (p) ? *p : throw runtime_error{"unexpected nullptr"};
+```
+
+If `new` cannot allocate enough space for the object, it will throw `std::bad_alloc`. We can use `std::set_new_handler` to deal with it. We can also pass `std::nothrow` to avoid throwing exceptions, in which case `nullptr` will be returned if there is no enough space:
+
+```cpp
+int* p = new(nothrow) int[10000]; // p may be nullptr
+if (!p) {...}
+operator delete(p, nothrow);
+```
+
+The `new` operator can be overloaded. We can have a memory management class:
+
+```cpp
+class Arena { // memory manager
+public:
+    void* alloc(size_t sz);
+    void free(void* p);
+};
+
+class X {
+public:
+    X(int v) : val(v) {}
+    void* operator new(size_t sz, Arena* a) { return a->alloc(sz); }
+private:
+    int val;
+};
+
+extern Arena* storage;
+
+void f() {
+    X* p = new(storage) X {3};
+    // use p
+    p->~X();
+    storage->free(p);
+}
+```
+
+`new` actually contains two steps:
+
+1. allocate enough space (don't care about the object type)
+2. cast `void*` to `X*` and call the constructor
+
+What we overload is the first step, while the second step is done as usual. In the line `X* p = new(storage) X {3};`, `X` is used to calculate the first argument `sz`, so we only have to pass one argument of type `Arena*` to `new`, which is called placement `new`. After that, `3` is sent to the constructor.
+
+Note that we cannot use `delete` to deallocate the object since it was not allocated on the free store but by the manager, so we have to call the destructor explicitly and let the manager free the space. We can overload `delete` just like what we did to `new`, but we **cannot** call it by ourselves. It is actually used to handle the case where the constructor throws excpetions. See Wiki.
+
+`new X {...}` will construct the object on the free store, while `X {...}` will contruct in the local scope. We can do this to eliminate ambiguity:
+
+```cpp
+struct X { int a, b; };
+struct XX { double a, b; };
+void f(X);
+void f(XX); // overloaded
+
+void g() {
+    f({1, 2}); // error, ambiguous
+    f(X {1, 2}); // ok
+    f(XX {1, 2}); // ok
+}
+```
+
+To create a `std::initializer_list`, elements between curly braces are copied (and converted to the target format if necessary) to the underlying array of `initializer_list`. It is **immutable**, and thus when we use it to initialize another object (eg: `std::vector`), elements are copied rather than moved to the new object. If we directly use a `{}`-list for constructor arguments or to initilize an aggregate, elements won't be copied (unless as by-value arguments):
+
+```cpp
+int v1 {1}; // direct initialization
+int v2 = {2}; // copy initialization
+```
+
+We can use `initializer_list` to deal with immutable homogenous lists with varying lengths:
+
+```cpp
+int sum(initializer_list<int> val) {
+    int s = 0;
+    for (auto v : val) s += v;
+    return s;
+}
+
+sum({1, 3, 5, 7, 9});
+sum({1.0, 3, 5, 7, 9.0}); // error, not homogenous
+```
+
+Note that the compiler does not deduce the type of the entire list. We still have to specify the container type because of the language restriction:
+
+```cpp
+template<typename T>
+void f1(T);
+
+f1({1, 2, 3}); // won't compile
+
+template<typename T>
+void f2(const initializer_list<T>&);
+
+f2({1, 2, 3}); // ok
+
+template<typename T>
+void f3(const vector<T>&);
+
+f3({1, 2, 3}); // error
+f3(vector<int>{1, 2, 3}); // ok
+```
+
+Forms of capture lists of lambda expressions:
+
+- `[]`: no capture
+- `[&]`: capture all by reference
+- `[=]`: capture all by value
+- `[capture-list]`: those preceded by `&` captured by reference, while others captured by value; it can contain `this` and names followed by `...` (variadic template arguments)
+- `[&, capture-list]`: capture those in the list by value and others by reference; the list can contain `this`
+- `[=, capture-list]`: capture those in the list by reference (all of them should be preceded by `&`) and others by value; the list cannot contain `this` since we never capture it by reference (`this` is a pointer, just capture it by value)
+
+If we capture `this`, all member variables are implicitly captured by reference (**no** need to put them in the capture list). For multi-threading, we'd better capture by value to avoid data race.
+
+To modify the state of a variable captured by value, we can declare `mutable` before the body. However, different from capturing by reference, this modification is done on the local copy in the closure, so it is invisible to the outside world:
+
+```cpp
+int x = 10;
+auto func1 = [&x] () { x += 10; };
+func1(); // x becomes 20
+auto func2 = [x] () mutable { x += 10; };
+func2(); // x becomes 30, but still 20 to the outside world
+func2(); // x becomes 40, but still 20 to the outside world
+```
+
+The return type of lambda expressions can be deduced by the compiler. If a lambda does not take parameters, we can omit `()`, but if we specify a return type with `->` or declare `mutable`, `()` can not be ommited. We can specify the type of lambda as `std::function<return type (arguments list)>`. This is necessary for recursion, because if we use `auto`, the type of itself has not been deduced inside of its body, and thus we cannot call itself recursively. Example for recursion:
+
+```cpp
+function<int (int, int)> gcd = [&gcd] (int a, int b) {
+    if (b == 0) return a;
+    return gcd(b, a % b);
+};
+```
+
+Usage of casts (avoid explicit type conversion; always prefer `T{v}` casts and these named casts to C-style casts):
+
+- `static_cast`: conversion between related types, may be of the same class hierachy (eg: `int` -> `double`)
+- `reinterpret_cast`: conversion between unrelated types (eg: `int` -> `char*` or `int*` -> `char*`)
+- `const_cast`: conversion between types that only differ by `const` or `volatile`
+- `dynamic_cast`: runtime checked conversion of pointers and references into a class hierachy
+
+For numerical values, `T{v}` only performs well-behaved conversions. If we have to use `static_cast`, we can compare the source and resulting numbers, and reject (throw exceptions) if the difference is intolerable.
