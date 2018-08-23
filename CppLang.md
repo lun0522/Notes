@@ -304,7 +304,7 @@ Forms of capture lists of lambda expressions:
 - `[]`: no capture
 - `[&]`: capture all by reference
 - `[=]`: capture all by value
-- `[capture-list]`: those preceded by `&` captured by reference, while others captured by value; it can contain `this` and names followed by `...` (variadic template arguments)
+- `[capture-list]`: those preceded by `&` captured by reference, while others captured by value; it can contain `this` and names followed by `...`
 - `[&, capture-list]`: capture those in the list by value and others by reference; the list can contain `this`
 - `[=, capture-list]`: capture those in the list by reference (all of them should be preceded by `&`) and others by value; the list cannot contain `this` since we never capture it by reference (`this` is a pointer, just capture it by value)
 
@@ -338,3 +338,126 @@ Usage of casts (avoid explicit type conversion; always prefer `T{v}` casts and t
 - `dynamic_cast`: runtime checked conversion of pointers and references into a class hierachy
 
 For numerical values, `T{v}` only performs well-behaved conversions. If we have to use `static_cast`, we can compare the source and resulting numbers, and reject (throw exceptions) if the difference is intolerable.
+
+## Chapter 12 Functions
+
+A function that does not return the control flow to the caller (eg: `exit()`) can be marked `[[noreturn]]`.
+
+`constexpr` functions are intended to be simple: no loops, no local variables, and no side effects. Recursions and conditional expressions are allowed (may increase compilation time).
+
+Initialization of `static` variables wouldn't lead to data race unless we do recursive calls during the initialization or deadlocks happen. This is done with some lock-free construct.
+
+To pass a reference to an array:
+
+```cpp
+void f(int(&r)[4]);
+
+int a1[] = {1, 2, 3, 4};
+int a2[] = {1, 2};
+f(a1); // ok
+f(a2); // error, different length
+```
+
+To be more flexible, we can put the length in template, which may create too many definitions for different lengths:
+
+```cpp
+template<typename T, int N>
+void f(T(&r)[N]) {}
+
+f(a1); // ok
+f(a2); // ok
+```
+
+When we cannot specify the number and types of parameters of a function, in addition to variadic templates and `initializer_list`, we can also put `...` at the end of the parameter list to indicate there are more parameters to come (of unknown types):
+
+```cpp
+#include <cstdarg> // declares all macros with prefix `va_`
+
+void error(int severity ...) { // we know nothing about other params except severity
+    va_list ap;
+    // specify the name of the last known parameter as the second parameter
+    va_start(ap, severity);
+    
+    while (true) {
+        char* p = va_arg(ap, char*); // assume following params are char*
+        if (!p) break;
+        cerr << p << ' ';
+    }
+    
+    cerr << endl;
+    va_end(ap); // paired with va_start
+    if (severity) exit(severity);
+} 
+```
+
+This is error-prone. Prefer to use `initalizer_list` or `const vector<string>&`.
+
+To call a constructor from another constructor (alternative way is to use default parameters):
+
+```cpp
+class complex {
+private:
+    double re, im;
+public:
+    complex(double r, double i) : re{r}, im{i} {}
+    complex() : complex{0, 0} {}
+};
+```
+
+The compiler only makes sure the default value has the right type. Its value can be changed. For example, we may use a `static` value:
+
+```cpp
+struct X {
+    int val;
+    static int config;
+    X(int v = config) : val{v} {}
+};
+
+int X::config = 1;
+
+void f() {
+    X x1 {}; // x1.val should be 1
+    x1.config = 2; // or `X::config = 1;`
+    X x2 {}: // x2.val should be 2
+}
+```
+
+Note that the space for default pointer-type parameters matters. For example, `int f(char* = nullptr);` is good, while `int f(char*= nullptr)` has a syntax error because of `*=`.
+
+For function overloading, the return type is not considered for overload resolution. Overloading across class or namespace is not enabled by default. For example, in a derived class, a method in the base class won't be considered for overload resolution. If we want that overloading happen, we have to use the `using`-directives or argument dependent lookup.
+
+To take a pointer to a function, `&` is optional; to deference such a pointer, `*` is optional:
+
+```cpp
+void error(string s) {}
+void (*fct)(string);
+
+void f() {
+    fct = &error;
+    fct = error; // also works
+    (*fct)("hello");
+    fct("world"); // also works
+}
+```
+
+A pointer to function must reflect the linkage (`extern`) of it, while reflection of exception (`noexcept`) is optinal (will lose information if we omit it):
+
+```cpp
+extern "C" void error(string s) noexcept {}
+extern "C" void (*fct1)(string) = &error; // lose useful information
+void (*fct2)(string) = &error; // mismatch
+```
+
+Note that we **cannot** reflect the linkage or exception if we use the `using`-directives:
+
+```cpp
+using P1 = void(int);
+using P2 = extern "C" void(int); // error
+using P3 = void(int) noexcept; // error
+```
+
+Avoid macros. We may use some pre-defined ones:
+
+```cpp
+cout << __func__ << "() in file " << __FILE__ << " on line " << __LINE__ << endl;
+```
