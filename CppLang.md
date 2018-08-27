@@ -461,3 +461,69 @@ Avoid macros. We may use some pre-defined ones:
 ```cpp
 cout << __func__ << "() in file " << __FILE__ << " on line " << __LINE__ << endl;
 ```
+
+## Chapter 13 Exception Handling
+
+Two ways to avoid mamory leaks during exception handling:
+
+1. **RAII**: Put the memory releasing code in the destructor. When we create local objects (or `unique_ptr`/`shared_ptr` if we need pointers), the destructor will always be called no matter the function is quitted normally or an exception is thrown. Note that this is important for constructors: if an exception is thrown inside of a constructor, objects that have been **completely** created in this constructor will be destructed automatically, and thus the caller won't have to worry about it
+
+2. **"Finally"**: C++ does not support the keyword `finally`, but we can create a lambda expression to wrap the code for releasing resources, and let another local object hold it. When that object goes out of scope, resources are also released
+
+An exception may be copied several times before it is caught, so don't put too much data in it. If the thrown object has a move constructor, it will be moved, which is not expensive. Otherwise it will be copied.
+
+We may subclass a standard library exception (including `runtime_error`, `out_of_range`, etc.) and override the virtual function `what()` to provide description. We may also use `catch (...)` to catch any type of exception:
+
+```cpp
+struct MyError1 : std::runtime_error {
+    const char* what() const noexcept { return "error 1"; }
+};
+
+struct MyError2 : std::out_of_range {
+    const char* what() const noexcept { return "error 2"; }
+};
+
+void f() {
+    try {...}
+    catch (std::exception& e) { // catch MyError1 or MyError2
+        cerr << e.what() << endl;
+    }
+    catch (...) { // for all other types of exceptions, clean up and rethrow
+        // clean up
+        throw;
+    }
+}
+```
+
+When an exception is caught, we can rethrow it. Note that the type of rethrown exception can be different. In the above example, if we put `throw;` in the `catch`-block, the rethrown exception is exatly the previously caught one (of type `MyError1` or `MyError2`); but if we put `throw e;`, the type of the thrown exception will be `std::exception`.
+
+`noexcept` **specifier** can be conditional. We can put an expression that evaluates to `true` or `false`:
+
+```cpp
+template<typename T>
+void f(T& x) noexcept(is_pod<T>()) {}
+```
+
+We may also use a `noexcept` **operator** inside:
+
+```cpp
+template<typename T>
+void g(vector<T>& v) noexcept(noexcept(f(v[0]))) {}
+```
+
+This **operator** does not run the expression (`f(v[0])` in this case), but only checks whether that expression is `noexcept`, and then report to the outer `noexcept` **specifier**.
+
+We can use a `try`-block as the body of a function. This may be useful for constructors:
+
+```cpp
+struct X {
+    int vi, vs;
+    X(int v1, int v2) try
+    : vi(v1), vs(v2) {...}
+    catch (std::exception& e) {...}
+};
+```
+
+Note that all completely constructed objects will have already been destructed before any `catch`-block is called, so we cannot use them or try to repair the new object. Usually we just throw another exception in the `catch`-block.
+
+To handle an exception on a different thread, use `current_exception` to transfer the exception.
