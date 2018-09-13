@@ -527,3 +527,6 @@ struct X {
 Note that all completely constructed objects will have already been destructed before any `catch`-block is called, so we cannot use them or try to repair the new object. Usually we just throw another exception in the `catch`-block.
 
 To handle an exception on a different thread, use `current_exception` to transfer the exception.
+
+## Chapter 14 Namespaces
+
