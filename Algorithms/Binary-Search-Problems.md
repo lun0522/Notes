@@ -98,12 +98,10 @@ class Solution:
             if nums[middle] == target:
                 return middle
             elif nums[middle] < target:
-                if left == middle:
-                    break
-                left = middle
+                left = middle + 1
             else:
                 right = middle
-        return right
+        return left
 ```
 
-Here we want to find an element **equal to or greater than** `target`, so we always return `right`. We also `break` when `left == middle`.
+Here we want to find an element **equal to or greater than** `target`. An ordianry binary search would suffice. Imagine when `right - left == 1`, `middle` will be equal to `left`. If `target` is between `nums[left]` and `nums[right]`, `left = middle + 1` will be executed and then `left` points to something greater than `target`, which is exactly what we want.

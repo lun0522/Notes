@@ -128,3 +128,72 @@ It seems that those two pointers can be reused only if we still use a number of 
 We now use three pointers. Initially they point to the first elements of three lists (*i.e.* point to 0, 4 and 5). To form a range, simply find out the smallest and the largest among them (0 and 5). Then we advance the pointer pointing to the smallest one (from 0 to 9), find another range (among 4, 5 and 9), and repeat this until one of pointers reaches the end the list.
 
 To avoid sorting, we can use a heap. A heap cannot keep track of both the smallest and the largest number, so in the solution, `heap` tracks **the next smallest number inside of a list, the index of that number, and the index of the list**, and `maximum` tracks **the largest number inside of `heap`**. When `heap` is updated, remember to update `maximum`.
+
+### 759. Employee Free Time
+
+We are given a list **schedule** of employees, which represents the working time for each employee.
+
+Each employee has a list of non-overlapping **Intervals**, and these intervals are in sorted order.
+
+Return the list of finite intervals representing **common, positive-length free time** for **all** employees, also in sorted order.
+
+**Example 1:**
+
+> **Input:** schedule = [[[1,2],[5,6]],[[1,3]],[[4,10]]]
+> 
+> **Output:** [[3,4]]
+> 
+> **Explanation:**
+> 
+There are a total of three employees, and all common
+free time intervals would be [-inf, 1], [3, 4], [10, inf].
+We discard any intervals that contain inf as they aren't finite.
+
+**Example 2:**
+
+> **Input:** schedule = [[[1,3],[6,7]],[[2,4]],[[2,5],[9,12]]]
+> 
+> **Output:** [[5,6],[7,9]]
+
+(Even though we are representing **Intervals** in the form **[x, y]**, the objects inside are **Intervals**, not lists or arrays. For example, **schedule[0][0].start = 1, schedule[0][0].end = 2,** and **schedule[0][0][0]** is not defined.)
+
+Also, we wouldn't include intervals like [5, 5] in our answer, as they have zero length.
+
+**Note:**
+
+1. **schedule** and **schedule[i]** are lists with lengths in range **[1, 50]**.
+2. **0 <= schedule[i].start < schedule[i].end <= 10^8**.
+
+```python
+# Definition for an interval.
+# class Interval:
+#     def __init__(self, s=0, e=0):
+#         self.start = s
+#         self.end = e
+
+from heapq import *
+
+class Solution:
+    def employeeFreeTime(self, schedule):
+        """
+        :type schedule: List[List[Interval]]
+        :rtype: List[Interval]
+        """
+        heap = [(s[0].start, i, 0) for i, s in enumerate(schedule)]
+        heapify(heap)
+        max_start = float("-inf")
+        ret = []
+        while heap:
+            end, idx, ptr = heappop(heap)
+            if max_start != float("-inf") and max_start < end:
+                ret.append(Interval(max_start, end))
+            max_start = max(max_start, schedule[idx][ptr].end)
+            ptr += 1
+            if ptr < len(schedule[idx]):
+                heappush(heap, (schedule[idx][ptr].start, idx, ptr))
+        return ret
+```
+
+`heap` keeps track of three variables: the end of the free time (`end`), the index of the emplyee (`idx`), and the index of the interval within the schedule of this employee (`ptr`). We want to know which free time interval in `heap` starts latest (we track it with `max_start`), and which ends earliest (we read it from `heap[0]`). When they form a valid interval, we record them in `ret`. 
+
+Note that the input `schedule` lables working time, so we use the `.start` of its elements as `end` of free time, and their `.end` as `start` of free time. Also note that when `ptr` reaches the end, we still update `max_start`, but we don't push it back to `heap` again. This means after the updated `max_start`, that employee is always free, and we don't have to worry about the availability of that employee any more.

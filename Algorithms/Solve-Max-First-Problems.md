@@ -33,29 +33,20 @@ class Solution:
         :type n: int
         :rtype: int
         """
-        n += 1
-        ret = 0
-        
-        count = [0] * 26
-        for task in tasks:
-            count[ord(task) - ord('A')] += 1
-        heap = [-v for v in count if v]
+        ret, n = 0, n + 1
+        heap = [-count for _, count in collections.Counter(tasks).items()]
         heapify(heap)
-        
         while heap:
-            todo = []
-            for i in range(n):
-                if not heap:
-                    break
-                todo.append(heappop(heap) + 1)
-            nonzero = [c for c in todo if c]
-            
-            if not heap and not nonzero:
-                ret += len(todo)
+            length = len(heap)
+            if length >= n:
+                todo = [heappop(heap) for _ in range(n)]
+                [heappush(heap, t + 1) for t in todo if t + 1]
             else:
+                heap = [t + 1 for t in heap if t + 1]
+            if heap:
                 ret += n
-                [heappush(heap, c) for c in nonzero]
-        
+            else:
+                ret += length
         return ret
 ```
 
@@ -67,7 +58,7 @@ There are three stages:
 
 1. We have enough kinds of tasks, and there is no need to insert "idle" states => `ret += n`
 2. We don't have enough kinds of tasks, but we will insert "idle" states to fill a period => `ret += n`
-3. We don't have enough kinds of tasks, and after this batch of tasks are done, there is no more tasks to do, and thus no need to insert "idle" states => `ret += len(todo)`
+3. We don't have enough kinds of tasks, and after this batch of tasks are done, there is no more tasks to do (*i.e.* `heap` becomes empty), and thus no need to insert "idle" states => `ret += previous length of heap`
 
 ### 774. Minimize Max Distance to Gas Station
 

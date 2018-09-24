@@ -9,7 +9,7 @@ For example, Given **[[0, 30],[5, 10],[15, 20]]**, return **2**.
 ```python
 from heapq import *
 
-class Solution(object):
+class Solution:
     def minMeetingRooms(self, intervals):
         """
         :type intervals: List[Interval]
@@ -17,22 +17,16 @@ class Solution(object):
         """
         # sort intervals according to the starting time
         intervals.sort(key=lambda x: x.start)
-        curMeeting = []  # only store the ending time
-        curRoom = maxRoom = 0
-        
+        numRoom = 0
+        heap = []
         for interval in intervals:
             # remove meetings that end before this meeting starts
-            while curMeeting and curMeeting[0] <= interval.start:
-                heappop(curMeeting)
-                curRoom -= 1
-            
+            while heap and heap[0] <= interval.start:
+                heappop(heap)
             # push the ending time of the current meeting to the heap
-            heappush(curMeeting, interval.end)
-            curRoom += 1
-            if curRoom > maxRoom:
-                maxRoom = curRoom
-            
-        return maxRoom
+            heappush(heap, interval.end)
+            numRoom = max(numRoom, len(heap))
+        return numRoom
 ```
 
 

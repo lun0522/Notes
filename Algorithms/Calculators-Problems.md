@@ -77,6 +77,41 @@ Expressions only include **+-** and **()**, so we can actually remove all **()**
 
 Use `stack` to record all signs outside of each level of parenthesis. When we come to a number, all signs recorded in `stack` determine whether the sign right before this number should be flipped. To avoid traversing `stack`, use `flip` to keep track of this. Whenever `stack` changes, `flip` also changes. The rest is simple, use another flag `isPlus` to record the lastest encountered sign, and flip it if necessary.
 
+We may also solve it in the recursive way as *Left Right Matching Problems*:
+
+```python
+class Solution:
+    def calculate(self, s):
+        """
+        :type s: str
+        :rtype: int
+        """
+        ops = {"+": lambda x, y: x + y, "-": lambda x, y: x - y}
+        def evaluate(start):
+            ret, op, i = 0, ops["+"], start
+            while True:
+                if i == len(s) or s[i] == ")":
+                    return ret, i
+                else:
+                    c = s[i]
+                    if c == " ":
+                        pass
+                    elif c == "(":
+                        val, i = evaluate(i + 1)
+                        ret = op(ret, val)
+                    elif c in ops:
+                        op = ops[c]
+                    else:
+                        num = 0
+                        while i < len(s) and s[i].isnumeric():
+                            num = num * 10 + int(s[i])
+                            i += 1
+                        ret = op(ret, num)
+                        continue
+                    i += 1
+        
+        return evaluate(0)[0]
+```
 
 ### 227. Basic Calculator II
 

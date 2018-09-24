@@ -75,7 +75,7 @@ In a valid window, if one character dominates, we can tolerate at most **k** oth
 
 To keep track of that, we actually don't need to sort a counter or use a heap. When the window moves, frequencies change continuously, so the highest frequency changes by **at most 1** each time. We can use a stack to track existing frequencies, and read the maximum frequency from the length of this stack.
 
-In the code above, `counter` maps each character to its frequency inside of the window, while `freqs` is a stack, where `stack[i]` represents how many characters have appearred for **at least `i`** times inside of the window. (Don't use `stack[i]` to represent how many cahracter have appearred for exactly `i` times, otherwise when the frequency of a character increases, we always have to remove it from the old frequency slot, which is unnecessary)
+In the code above, `counter` maps each character to its frequency inside of the window, while `freqs` is a stack, where `freqs[i]` represents how many characters have appearred for **at least `i`** times inside of the window. (Don't use `freqs[i]` to represent how many characters have appearred for exactly `i` times, otherwise when the frequency of a character increases, we always have to remove it from the old frequency slot, which is unnecessary)
 
 ### 895. Maximum Frequency Stack
 
@@ -155,6 +155,6 @@ class FreqStack:
         return x
 ```
 
-Similarily, in the code above, `self.counter` maps each character to its frequency, while `self.freqs` is a stack of stack, where `stack[i]` stacks all numbers of frequency **at least `i`**. When we need to get numbers of the highest frequency, we go to `self.freqs[-1]`. Since "if there is a tie for most frequent element, the element closest to the top of the stack is removed and returned", we simply pop out `stack[-1][-1]`.
+Similarily, in the code above, `self.counter` maps each character to its frequency, while `self.freqs` is a stack of stack, where `self.freqs[i]` stacks all numbers of frequency **at least `i`**. When we need to get numbers of the highest frequency, we go to `self.freqs[-1]`. Since "if there is a tie for most frequent element, the element closest to the top of the stack is removed and returned", we simply pop out `self.freqs[-1][-1]`.
 
 Note that after a number is pushed onto the stack and its frequency increases by 1, we don't remove it from the old frequency slot, so that the history of `.push` is preserved, which will be useful for the future `.pop`.

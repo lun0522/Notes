@@ -123,19 +123,17 @@ class Solution:
         :type prices: List[int]
         :rtype: int
         """
-        if k >= len(prices) // 2 :
-            ret = 0
-            for i in range(1, len(prices)):
-                ret += max(0, prices[i] - prices[i - 1])
-            return ret
-            
+        if k >= len(prices) - 1:
+            return prices and sum([max(0, day2 - day1) for day1, day2 
+                                   in zip(prices[:-1], prices[1:])]) or 0
+        
         hold = [float("-inf")] * (k + 1)
         release = [float("-inf")] * (k + 1)
         release[0] = 0
         for price in prices:
             for i in range(1, k + 1):
-                release[i] = max(release[i], hold[i] + price)
                 hold[i] = max(hold[i], release[i - 1] - price)
+                release[i] = max(release[i], hold[i] + price)
         return max(release)
 ```
 
@@ -143,7 +141,7 @@ There are two states: `hold` (have stock on hand) and `release` (no stock on han
 
 `hold[0]` is not achievable since we cannot hold the stock if no buying ever happened. `release[0]` is the only possible state at the beginning. If we already held the stock, we can choose to keep it (`hold[i]` -> `hold[i]`) or sell it (`hold[i] + price` -> `release[i]`). If we didn't hold the stock, we can buy it (`release[i] - price` -> `hold[i + 1]`) or do nothing (`release[i]` -> `release[i]`).
 
-Note that if there are **n** days in total, we can do at most **2n** transactions (it doesn't make sense to sell and then buy on the same day). So, if **k >= 2n**,  this problem degenerates to *122. Best Time to Buy and Sell Stock II*, where we are allowed to make unlimited number of transactions.
+Note that if there are **n** days in total, we can do at most **n - 1** transactions (*i.e.* buy-sell pairs). So, if **k >= n - 1**,  this problem degenerates to *122. Best Time to Buy and Sell Stock II*, where we are allowed to make unlimited number of transactions.
 
 ### 309. Best Time to Buy and Sell Stock with Cooldown
 
@@ -178,7 +176,7 @@ class Solution:
         return max(release, cooldown)
 ```
 
-We are allowed to do as many transactions as we want. Now there are three states: `hold` (have stock on hand), `release` (no stock on hand) and `cooldown` (sold stock yesterday). Rules of update:
+We are allowed to do as many transactions as we want. Now there are three states: `hold` (have stock on hand), `release` (sold stock before yesterday) and `cooldown` (sold stock yesterday). Rules of update:
 
 - For `hold`, if we already held the stock yesterday, we can keep holding it; otherwise, if we were not in the `cooldown` state, we can buy the stock today.
 - For `release`, if we didn't hold the stock yesterday, we can be in the `release` states today.
