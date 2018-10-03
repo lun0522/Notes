@@ -30,56 +30,6 @@ The expression string may contain open **(** and closing parentheses **)**, the 
 - **Do not** use the `eval` built-in library function.
 
 ```python
-class Solution(object):
-    def calculate(self, s):
-        """
-        :type s: str
-        :rtype: int
-        """
-        idx, res = 0, 0
-        stack, flip, isPlus = [True], False, True
-        while idx < len(s):
-            c = s[idx]
-            if c == " ":
-                pass
-            elif c == "(":
-                stack.append(isPlus)
-                if not isPlus:
-                    flip = not flip
-                # imagine "1-(5)"
-                # should reset when enter parenthesis
-                isPlus = True
-            elif c == ")":
-                if not stack.pop():
-                    flip = not flip
-            elif c == "+":
-                isPlus = True
-            elif c == "-":
-                isPlus = False
-            else:
-                num, ptr = ord(c) - ord("0"), idx + 1
-                while ptr < len(s) and s[ptr].isdigit():
-                    num = num * 10 + ord(s[ptr]) - ord("0")
-                    ptr += 1
-                sign = isPlus
-                if flip:
-                    sign = not sign
-                if sign:
-                    res += num
-                else:
-                    res -= num
-                idx = ptr - 1
-            idx += 1
-        return res
-```
-
-Expressions only include **+-** and **()**, so we can actually remove all **()** (*i.e.* flatten expression) and do all computations sequentially. The only thing we need to care about is the sign before each number.
-
-Use `stack` to record all signs outside of each level of parenthesis. When we come to a number, all signs recorded in `stack` determine whether the sign right before this number should be flipped. To avoid traversing `stack`, use `flip` to keep track of this. Whenever `stack` changes, `flip` also changes. The rest is simple, use another flag `isPlus` to record the lastest encountered sign, and flip it if necessary.
-
-We may also solve it in the recursive way as *Left Right Matching Problems*:
-
-```python
 class Solution:
     def calculate(self, s):
         """
@@ -87,8 +37,8 @@ class Solution:
         :rtype: int
         """
         ops = {"+": lambda x, y: x + y, "-": lambda x, y: x - y}
-        def evaluate(start):
-            ret, op, i = 0, ops["+"], start
+        def evaluate(i):
+            ret, op = 0, ops["+"]
             while True:
                 if i == len(s) or s[i] == ")":
                     return ret, i
@@ -110,7 +60,7 @@ class Solution:
                         continue
                     i += 1
         
-        return evaluate(0)[0]
+        return evaluate(0)[0] 
 ```
 
 ### 227. Basic Calculator II
@@ -143,51 +93,45 @@ The expression string contains only **non-negative** integers, **+**, **-**, **\
 - **Do not** use the `eval` built-in library function.
 
 ```python
-class Solution(object):
+class Solution:
     def calculate(self, s):
         """
         :type s: str
         :rtype: int
         """
-        idx, res = 0, 0
-        prevNum, isPlus, isMul = None, True, None
-        while idx < len(s):
-            c = s[idx]
+        ops = {"+": lambda x, y: x + y, "-": lambda x, y: x - y,
+               "*": lambda x, y: x * y, "/": lambda x, y: x // y}
+        
+        i = 0
+        stack = []
+        while i < len(s):
+            c = s[i]
             if c == " ":
                 pass
-            elif c in "+-":
-                if isPlus:
-                    res += prevNum
+            elif c in "+-*/":
+                stack.append(c)
+            else:  # number
+                num = 0
+                while i < len(s) and s[i].isnumeric():
+                    num = num * 10 + ord(s[i]) - ord('0')
+                    i += 1
+                if stack and stack[-1] in "*/":
+                    op = ops[stack.pop()]
+                    stack.append(op(stack.pop(), num))
                 else:
-                    res -= prevNum
-                isPlus = c == "+"
-                isMul = None
-            elif c in "*/":
-                isMul = c == "*"
-            else:
-                num, ptr = ord(c) - ord("0"), idx + 1
-                while ptr < len(s) and s[ptr].isdigit():
-                    num = 10 * num + ord(s[ptr]) - ord("0")
-                    ptr += 1
-                if isMul is None:
-                    prevNum = num
-                else:
-                    if isMul:
-                        prevNum *= num
-                    else:
-                        prevNum //= num
-                idx = ptr - 1
-            idx += 1
+                    stack.append(num)
+                continue
+            i += 1
         
-        if isPlus:
-            return res + prevNum
-        else:
-            return res - prevNum
+        if not stack:
+            return 0
+        ret = stack[0]
+        for i in range(1, len(stack), 2):
+            ret = ops[stack[i]](ret, stack[i + 1])
+        return ret
 ```
 
-All numbers connected by **\*/** are in one component. When we are inside of a component, `res` is kept unchanged. We use `isPlus` to record the sign of this component, and `prevNum` to keep track of the value of the part of this component that has been evaluated. When we encounter **+-**, we know a component ends, and conclude it into `res` using `prevNum` and `isPlus`.
-
-Note that when a component ends, `isMul` is set to `None`, so later when we encounter the first number of the next component, we don't do mul or div, but simply store it in `prevNum`. Also note don't forget to conclude `prevNum` at the very end.
+We scan twice. The first scan is to pre-process `s`. If we encounter addition or subtraction, simply push it to `stack`. If we encounter multiplication or division, immediately evaluate it. In the second scan, we only deal with additions and subtractions.
 
 ### 772. Basic Calculator III
 
@@ -211,64 +155,48 @@ Some examples:
 **Note: Do not** use the `eval` built-in library function.
 
 ```python
-class Solution(object):
+class Solution:
     def calculate(self, s):
         """
         :type s: str
         :rtype: int
         """
-        def evaluate(expr):
-            res = 0
-            prevNum, isPlus, isMul = None, True, None
-            for e in expr:
-                if type(e) is int:
-                    if isMul is None:
-                        prevNum = e
-                    else:
-                        if isMul:
-                            prevNum *= e
-                        else:
-                            prevNum //= e
-                elif e in "+-":
-                    if isPlus:
-                        res += prevNum
-                    else:
-                        res -= prevNum
-                    isPlus = e == "+"
-                    isMul = None
-                elif e in "*/":
-                    isMul = e == "*"
-                else:
-                    print("Should not reach here")
-            if isPlus:
-                return res + prevNum
-            else:
-                return res - prevNum
+        ops = {"+": lambda x, y: x + y, "-": lambda x, y: x - y,
+               "*": lambda x, y: x * y, "/": lambda x, y: x // y}
         
-        parens, stack = [], []
-        i = 0
-        while i < len(s):
-            c = s[i]
-            if c == " ":
-                pass
-            elif c == "(":
-                parens.append(len(stack))
-            elif c == ")":
-                start = parens.pop()
-                res = evaluate(stack[start:])
-                del stack[start:]
-                stack.append(res)
-            elif c.isdigit():
-                num, ptr = ord(c) - ord("0"), i + 1
-                while ptr < len(s) and s[ptr].isdigit():
-                    num = 10 * num + ord(s[ptr]) - ord("0")
-                    ptr += 1
-                stack.append(num)
-                i = ptr - 1
-            else:
-                stack.append(c)
-            i += 1
-        return evaluate(stack)
-```
+        def evaluate(i):
+            stack = []
+            while i < len(s):
+                c = s[i]
+                if c == " ":
+                    pass
+                elif c in "+-*/":
+                    stack.append(c)
+                elif c == ")":
+                    i += 1
+                    break
+                else:  # number or left parenthesis
+                    if c == "(":
+                        num, i = evaluate(i + 1)
+                    else:
+                        num = 0
+                        while i < len(s) and s[i].isnumeric():
+                            num = num * 10 + ord(s[i]) - ord('0')
+                            i += 1
+                    if stack and stack[-1] in "*/":
+                        op = ops[stack.pop()]
+                        stack.append(op(stack.pop(), num))
+                    else:
+                        stack.append(num)
+                    continue
+                i += 1
 
-`evaluate` is roughly the same to Basic Calculator II. What is different is now we have a outer loop, where `parens` records the position of **(**, and `stack` records expressions. Numbers are converted from `str` to `int` in the outer loop, so in `evaluate` we simply use the element if its type is `int`. **+-\*/** are simply pushed to the stack. When a **(** is encountered, we record the start position, so that later when a **)** is encountered, we start to evaluate the expression between this pair of parentheses. **()** are never pushed to the stack.
+            if not stack:
+                return 0, i
+            ret = stack[0]
+            for j in range(1, len(stack), 2):
+                ret = ops[stack[j]](ret, stack[j + 1])
+            return ret, i
+        
+        return evaluate(0)[0]
+```

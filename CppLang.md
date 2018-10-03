@@ -93,7 +93,7 @@ string s2 {R"(long
 string)"};  // the same to "long\nstring"
 ```
 
-If `char[]` is passed as an argument, it will be treated as `char*`, and thus `sizeof(arr)` will return the size of the pointer itself and we cannot use it to calculate the size of the array. Besides, `for (char& c : arr) {..}` won't compile since the size is unknown. We may have to pass in the size of the array as well.
+If `char[]` is passed as an argument, it will be treated as `char*`, and thus `sizeof(arr)` will return the size of the pointer itself and we cannot use it to calculate the size of the array. Besides, `for (char c : arr) {..}` won't compile since the size is unknown. We may have to pass in the size of the array as well.
 
 Read from right to left to find out what does `const` decorate:
 
@@ -125,11 +125,15 @@ string s3 = move(rc2);  // equivalent to static_cast
 
 ## Chapter 8 Structures, Unions, and Enumerations
 
-Some `class` and `struct` are Plain Old Data types, which don't have user-defined constructors, destructors or virtual member functions. They are stored in contiguous sequence of bytes, so we can simply use `memcpy` to copy an array of them. We can use `is_pod` to predicate whether a type is POD.
+Some `class` and `struct` are **Plain Old Data** types, which don't have user-defined constructors, destructors or virtual member functions. They are stored in contiguous sequence of bytes, so we can simply use `memcpy` to copy an array of them. We can use `is_pod` to predicate whether a type is POD.
 
 To optimize the memory usage of `struct`, we can reorder elements in it to reduce the memory waste caused by alignments. Readability is usually considered more important than this improvement.
 
-Prefer `enum class` to plain `enum`. For `enum class`, enumerators are in the scope (namespace) of `enum class`, and they cannot be implicitly converted to other types (eg: `int`) unless we use `static_cast`. We can specify the underlying data type: `enum class Color : char { red, green, blue };`
+Prefer `enum class` to plain `enum`:
+
+- We can specify the underlying data type: `enum class Color : char { red, green, blue };`
+- Enumerators are in the scope (namespace) of `enum class`, so we cannot directly use `red`, but `Color::red`
+- Enumerators cannot be implicitly converted to other types (eg: `int`) unless we use `static_cast`
 
 ## Chapter 9 Statements
 
@@ -321,7 +325,7 @@ func2(); // x becomes 30, but still 20 to the outside world
 func2(); // x becomes 40, but still 20 to the outside world
 ```
 
-The return type of lambda expressions can be deduced by the compiler. If a lambda does not take parameters, we can omit `()`, but if we specify a return type with `->` or declare `mutable`, `()` can not be ommited. We can specify the type of lambda as `std::function<return type (arguments list)>`. This is necessary for recursion, because if we use `auto`, the type of itself has not been deduced inside of its body, and thus we cannot call itself recursively. Example for recursion:
+The return type of lambda expressions can be deduced by the compiler. If a lambda does not take parameters, we can omit `()`, but if we specify a return type with `->` or declare `mutable`, `()` can not be ommited. We can specify the type of lambda as `std::function<return-type (arguments-list)>`. This is necessary for recursion, because if we use `auto`, the type of itself has not been deduced inside of its body, and thus we cannot call itself recursively. Example for recursion:
 
 ```cpp
 function<int (int, int)> gcd = [&gcd] (int a, int b) {
