@@ -1,52 +1,5 @@
 # N Pointers Problems
 
-### 42. Trapping Rain Water
-
-Given **n** non-negative integers representing an elevation map where the width of each bar is 1, compute how much water it is able to trap after raining.
-
-![](http://www.leetcode.com/static/images/problemset/rainwatertrap.png)
-
-The above elevation map is represented by array [0,1,0,2,1,0,1,3,2,1,2,1]. In this case, 6 units of rain water (blue section) are being trapped.
-
-**Example:**
-
-> **Input:** [0,1,0,2,1,0,1,3,2,1,2,1]
-> 
-> **Output:** 6
-
-```python
-class Solution:
-    def trap(self, height):
-        """
-        :type height: List[int]
-        :rtype: int
-        """
-        left, right, water = 0, len(height) - 1, 0
-        while left < right:
-            curH = 0
-            if height[left] <= height[right]:
-                while left < right and height[left] <= height[right]:
-                    if height[left] > curH:  # renew curH
-                        curH = height[left]
-                    else:  # count water
-                        water += curH - height[left]
-                    left += 1
-            else:
-                while left < right and height[left] >= height[right]:
-                    if height[right] > curH:  # renew curH
-                        curH = height[right]
-                    else:  # count water
-                        water += curH - height[right]
-                    right -= 1
-        return water
-```
-
-The amount of the water that can be trapped in a certain grid is determined by the highest wall to the left of this grid and the highest wall to the right. We can build arrays `l` and `r` with two traversals, where `l[i]` tracks the largest height to the left of `i`, and `r[i]` tracks the right, so that the water trapped in `i` is: `min(l[i], r[i]) - height[i]`. The space complexity is O(n).
-
-Actually we don't really need to know the heighest wall in both directions. If we know the highest wall to the left is of height `l[i]` and there **exists** a wall to the right **equal to or taller than `l[i]`**, then we can conclude the water trapped in `i` is `l[i] - height[i]`. If `height[i] > l[i]`, then `i` will become the new wall, and we renew the height of the highest wall to the left.
-
-We keep scanning from the left to the right, until the highest wall to the right is not high enough. Then we start to scan from the right, until the wall to the left is not enough, and so on.
-
 ### 632. Smallest Range
 
 You have **k** lists of sorted integers in ascending order. Find the **smallest** range that includes at least one number from each of the **k** lists.
