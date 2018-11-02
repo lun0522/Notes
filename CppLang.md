@@ -534,3 +534,131 @@ To handle an exception on a different thread, use `current_exception` to transfe
 
 ## Chapter 14 Namespaces
 
+Argument-dependent lookup means when a function is called, the compiler don't just lookup the implementation of it in the current namespace, but also namespaces of its auguments:
+
+```cpp
+namespace Chrono {
+    class Date {...};
+    bool operator==(const Date&, const std::string&);
+}
+
+void f(Chrono::Date d, std::string s) {
+    if (d == s) {...} // implemented in namespace Chrono
+}
+```
+
+Rules of associated namespaces (AN):
+
+- If an argument is a class member, then AN is the class itself and the enclosing namespaces
+- If an argument is a member of a namespace, the AN is the enclosing namespaces
+- If an argument is a built-in type, no AN 
+
+Namespaces are open, so we can add functions to namespaces in another place, or separate the interface with the implementation:
+
+```cpp
+namespace Mine {
+    void f(); // declaration
+}
+
+namespace Mine {
+    void f() {...} // implementation
+    void g(); // add `g()` to `Mine`
+}
+
+Mine::g() {...}
+```
+
+For large projects, we may want to separate it into a user interface (which is stable) and an implementer interface (which may change a lot):
+
+```cpp
+namespace Mine {
+    void f();
+}
+
+namespace Mine_impl {
+    void f();
+    void helper1();
+    void helper2();
+}
+```
+
+We can use alias to represent namespaces whose names are too long:
+
+```cpp
+namespace Foundation_library_v2r11 {...}
+namespace Lib = Foundation_library_v2r11;
+```
+
+If an explicitly qualified name (like `B::String` below) cannot be found in the namespace (like `B`), the compiler will look for `using`-directives within that namespace, and go to the mentioned namespaces (like `A`) to find the name:
+
+```cpp
+namespace A {
+    class String {...};
+    void f();
+}
+
+namespace B {
+    using namespace A;
+}
+
+void g(B::String); // this works
+void B::f() {...} // this won't work! should use void A::f()
+```
+
+We can use this to extend an exisitng namespace, since everything in `A` is inherited by `B`. Note this doesn't work when we are to define something.
+
+Use both `using`-**directives** (use the entire namespace) and `using`-**declarations** (use something within a namespace) to avoid name clashes:
+
+```cpp
+namespace A {
+    class String {...};
+    class Vector {...};
+}
+
+namespace B {
+    class String {...};
+    class List {...};
+}
+
+namespace C {
+    using namespace A;
+    using namespace B;
+    using B::String;
+    class List {...};
+    // here we can use `Vector` in A, `String` in B, 
+    // and `List` in C without stating namespaces
+}
+```
+
+Namespaces can be nested. For example, inner namespaces might be the different version of the same library, in which case we can use `inline` to specify which version is used by default:
+
+```cpp
+namespace Mine {
+    namespace V1 {
+        void f();
+    }
+    
+    inline namespace V2 {
+        void f();
+    }
+}
+
+using namespace Mine;
+void g() {
+    f();     // calls `Mine::V2::f()`
+    V1::f(); // calls `Mine::V1::f()`
+}
+```
+
+If we just want to put functions in a namespace to avoid name clashes and not intend to expose them to the outside world, we can create a **unnamed** namespace:
+
+```cpp
+namespace {
+    void f() {...}
+}
+
+// the unnamed namespace above is implicitly used here
+f();
+```
+
+## Chapter 15 Source Files and Programs

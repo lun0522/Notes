@@ -49,8 +49,6 @@ class Solution:
 
 What we want is a `middle` whose square is **equal to or less than** x. If the square of `middle` is not exactly `x`, it still might be the answer, which is why we don't say `left = middle + 1`. Note that `left` and `middle` might be equal, in which case `left = middle` will lead to an infinite loop, so we can `break` there. 
 
-We always return `left` because of "**equal to or less than**".
-
 ### 35. Search Insert Position
 
 Given a sorted array and a target value, return the index if the target is found. If not, return the index where it would be if it were inserted in order.

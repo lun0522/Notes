@@ -283,8 +283,8 @@ There might be two issues with the graph:
 1. A certain node may have two parents.
 2. There might be a circle (so that no one can be the root).
 
-- If only 1 happens, we will have two candidate edges, we return the one occurs last in the input `edges`.
-- If only 2 happens, we simply remove the edge that causes the circle (just like *684. Redundant Connection*)
+- If only *1* happens, we will have two candidate edges, we return the one occurs last in the input `edges`.
+- If only *2* happens, we simply remove the edge that causes the circle (just like *684. Redundant Connection*)
 - If both of them happen, we will have two candidate edges. We know the answer must be among these two candidates. We remove the second candidate at first, and then do union-find. If there is no circle, that means we had removed the problematic edge, which is the second candidate; otherwise we return the first candidate.
 
 In the code above, we first find out whether there is a node that has two parents. If so, store them in `candidate` and disable `candidate[1]`. Later when we do union-find, if there is no circle, return `candidate[1]`; if there is a circle and `candidate`, return `candidate[0]`; if there is a circle but no `candidate`, return the edge that causes the circle.
