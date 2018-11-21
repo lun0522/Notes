@@ -662,3 +662,98 @@ f();
 ```
 
 ## Chapter 15 Source Files and Programs
+
+`static`, `const`, `constexpr` and type aliases imply default internal linkage:
+
+```cpp
+static int x1 = 1;
+const char x2 = 'a';
+```
+
+To make them accessible from other files, we either put them in header files, or:
+
+```cpp
+// .h
+extern int x1;
+extern const char x2;
+
+// .cpp
+int x1 = 1;
+const char x2 = 'a';
+```
+
+If an `inline` function is used in different .cpp files, we cannot only define it in one .cpp file and try to use it in another file. They must be defined in all those files and have exactly the same implementation, because the compiler only works on a single translation unit (.cpp file) and replace each usage of that function with the implementation before invoking the linker. We can put the implementation in the header file instead so that it can be shared easily.
+
+Avoid to use global variables. If really necessary, put them in unnamed namespaces or declare as `static`.
+
+Do **not** put these in header files:
+
+- Ordinary function definitions: `char get(char* p) { return *p++; }`
+- Data/Aggregate definitions: `int a; int arr[] = { 1, 2, 3 };`
+- Unnamed namespaces: `namespace {...}`
+- `using`-directives: `using namespace std;`
+
+Use `extern "C"` to tell the compiler not to mangle the function name of legacy C code:
+
+```cpp
+extern "C" int a1; // declaration
+extern "C" void f1();
+extern "C" {
+    int a2; // definition
+    extern int a3; // declaration
+    void f2();
+    #include <string.h>
+}
+```
+
+Another way to enclose declarations of C functions is to modify the C header file:
+
+```cpp
+#ifdef __cplusplus
+extern "C" {
+#endif
+    int strcmp(const char*, const char*);
+    int strlen(const char*);
+#ifdef __cplusplus
+}
+#endif
+```
+
+In this way the file can still be compiled by the C compiler. We can also put the declaration in a namespace (such as `std::printf`) so that the global namespace will not be polluted.
+
+Previously we tried to separate the interface from implementation by creating two namespaces (where the second one has suffix `_impl`). We can do something similar with header files:
+
+```cpp
+// parser.h
+namespace Parser { // interface for the user
+    double expr(bool get);
+}
+
+// parser_impl.h
+#include "parser.h" // let the compiler check consistency
+
+namespace Parser { // interface for the implementer
+    double expr(bool get);
+    double term(bool get);
+    double expr(bool get);
+}
+```
+
+There is no guaranteed order of initialization of global variables in different translation units, and we cannot catch exceptions in the translation, so we have to minimize the usage of global variables and **not** to initialize with external variables.
+
+Putting a global variable in a function so that it is not initialized until used for the first time, and thus compilation time is reduced:
+
+```cpp
+int& use_count() {
+    static int uc = 0;
+    return uc;
+}
+```
+
+To terminate a program on purpose:
+
+- Call `abort()`. It does **not** do any cleaning
+- Call `quick_exit()`. It does **not** do any cleaning either, but we can set handlers (which will be invoked after `quick_exit()`) with `at_quick_exit()`
+- Call `exit()`. Destructors of **static** objects will be called (destructors of **local** objects will **not** called). We can set handlers with `atexit()`
+
+Throwing exceptions ensures destructors of local objects are called, so it is preferred than calling `exit`.
