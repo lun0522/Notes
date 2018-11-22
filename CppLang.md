@@ -757,3 +757,76 @@ To terminate a program on purpose:
 - Call `exit()`. Destructors of **static** objects will be called (destructors of **local** objects will **not** called). We can set handlers with `atexit()`
 
 Throwing exceptions ensures destructors of local objects are called, so it is preferred than calling `exit`.
+
+## Chapter 16 Classes
+
+Assignment and copy initialization are provided by default (memberwise copy). Use `explicit` to avoid implicit conversion, especially for signle-argument constructors:
+
+```cpp
+class X {
+    int x;
+public:
+    explicit X(int v);
+};
+
+X::X(int v) : x(v) {} // no need to specify `explicit` again
+
+X x1 {1}; // ok
+X x2 = X{1}; // ok. move constructor may be called
+X x3 = {1}; // error
+X x4 = 1; // error
+```
+
+The member function defined within the class definition is implicitly inlined. It should be small, rarely modified and frequently used.
+
+If a member variable is marked `mutable`, it can be modified even if it is in a `const` object. Another way is to store a pointer to that variable, so that its mutability is independent of the object.
+
+`static` member variables must be declared within the definition of the class and then defined somewhere else even if it is marked `private` (*i.e.* cannot initialize it until the definition of the class is **complete**):
+
+```cpp
+class Date {
+    int d, m, y;
+    static Date default_date; // declaration
+public:
+    Date(int dd = 0, int mm = 0, int yy = 0) {
+        d = dd ? dd : default_date.d;
+        m = mm ? mm : default_date.m;
+        y = yy ? yy : default_date.y;
+    }
+};
+
+Date Date::default_date {1, 1, 1970}; // definition
+void f(Date);
+void g() {
+    f({}); // equivalent to passing a copy of Date::default_date
+}
+
+```
+
+A member class (also called nested class) can access types and `static` member variables of its enclosing class. When given an instance of the enclosing class, the nested class can access members of it even if it is `private`. However, given an instance of the nested class, its enclosing class cannot access `private` members of it.
+
+If a function is associated with a class, but does not need to directly access `private` members, instead of making it a member function, we can put it outside of the class definition but within the same enclosing namespace, so that the interface of the class is simpler and we can still use those functions via argument-dependent lookup:
+
+```cpp
+namespace Chrono {
+    class Date {
+        int d, m, y;
+    public:
+        Date (int=0, int=0, int=0);
+    };
+    
+    bool operator==(const Date& a, const Date& b);
+    const Date& default_date() { // lazy static variable
+        static Date d {1, 1, 1970};
+        return d;
+    }
+    
+    // constructor should be able to see `default_date()`
+    // so it must be defined outside of the class denition
+    Date::Date(int dd, int mm, int yy) {
+        d = dd ? dd : default_date().d;
+        m = mm ? mm : default_date().m;
+        y = yy ? yy : default_date().y;
+    }
+}
+```
