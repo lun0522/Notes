@@ -760,7 +760,9 @@ Throwing exceptions ensures destructors of local objects are called, so it is pr
 
 ## Chapter 16 Classes
 
-Assignment and copy initialization are provided by default (memberwise copy). Use `explicit` to avoid implicit conversion, especially for signle-argument constructors:
+Copy constructor (eg: `X x{y};`) and assignment (eg: `X x = y;`) are provided by default (memberwise copy). Move constructor and assignment are also provided as memberwise move.
+
+Use `explicit` to avoid implicit conversion, especially for signle-argument constructors:
 
 ```cpp
 class X {
@@ -771,22 +773,24 @@ public:
 
 X::X(int v) : x(v) {} // no need to specify `explicit` again
 
-X x1 {1}; // ok
+X x1 {1};    // ok
 X x2 = X{1}; // ok. move constructor may be called
-X x3 = {1}; // error
-X x4 = 1; // error
+X x3 = {1};  // error
+X x4 = 1;    // error
 ```
 
 The member function defined within the class definition is implicitly inlined. It should be small, rarely modified and frequently used.
 
 If a member variable is marked `mutable`, it can be modified even if it is in a `const` object. Another way is to store a pointer to that variable, so that its mutability is independent of the object.
 
-`static` member variables must be declared within the definition of the class and then defined somewhere else even if it is marked `private` (*i.e.* cannot initialize it until the definition of the class is **complete**):
+`static` member variables must be declared within the definition of the class and then defined somewhere else even if it is marked `private`, **unless** their are `const` integral or enumeration types, or `constexpr` literal types:
 
 ```cpp
 class Date {
     int d, m, y;
-    static Date default_date; // declaration
+    static const int x1 = 1; // fine
+    static const float x2 = 0.1; // error
+    static Date default_date; // only declaration
 public:
     Date(int dd = 0, int mm = 0, int yy = 0) {
         d = dd ? dd : default_date.d;
@@ -829,4 +833,156 @@ namespace Chrono {
         y = yy ? yy : default_date().y;
     }
 }
+```
+
+## Chapter 17 Construction, Cleanup, Copy and Move
+
+We can mark a destructor `= delete` to prevent from allocation on stack. However, in that case we won't be able to call `delete` on instances allocated on free store anymore. An alternative way is to mark the destructor `private`:
+
+```cpp
+class X {
+    ~X();
+public:
+    void destroy() { this->~X(); }
+};
+
+void f() {
+    X* x = new X(); // cannot allocate on stack anymore
+    x->destroy(); // cannot `delete x` anymore
+}
+```
+
+If any method of a class is `virtual`, probably this class will be subclassed. It might be necessary to mark its destructor `virtual` as well so that the destructor of derived class will always be called.
+
+For local variables and free-store objects, if we don't use any constructor, members of class types will still be initialized while members of built-in types are left uninitialized (might be useful for performance critical programs):
+
+```cpp
+class Y {
+    char buf[1024];
+    Date date;
+};
+
+Y y0; // static object, fully initialized
+      // `buf` is filled with 0
+
+void f() {
+    Y y1 {}; // constructor is called, fully initialized
+    Y y2; // local variable, `buf` is uninitialized 
+          // while `date` is set to default date
+}
+```
+
+A default memberwise constructor is provided unless some members are `const` or references. If we define a custom constructor that requires arguments, the default one will disappear, but the default assignment and copy constructors still exist.
+
+Containers are able to use elements in initilizer lists to construct their content:
+
+```cpp
+struct X { X(string); };
+
+void f() {
+    X a1[10]; // error, cannot initlize
+    X a2[] {string{"alpha"}, string{"beta"}}; // constructs two elements
+    vector<X> v1; // fine, no element
+    vector<X> v2 {string{"alpha"}, string{"beta"}}; // constructs two elements
+}
+```
+
+If a class has multiple constructors, resolution rules are (always prefer the simpler constructor):
+
+- If both a default constructor and a an `initializer_list` constructor might be invoked, prefer the default constructor
+- If both an `initializer_list` constructor and an ordinary constructor might be invoked, prefer the `initializer_list` constructor
+
+We can pass `initializer_list` by value since it is a simple wrapper of the underlying array and doesn't take much space. It provides methods `begin()`, `end()` and `size()` but doesn't support subscripting. It is immutable, so we **cannot** modify any element of it or apply a move constructor.
+
+The constructor can initialize the base, but **cannot** initialize the base of base:
+
+```cpp
+struct X { X(int); };
+struct XX: X { XX(int); };
+struct X1: XX { X1(int a):  X(a) {} }; // error
+struct X2: XX { X2(int a): XX(a) {} }; // ok
+```
+
+The constructor can also delegate to another constructor, but it **cannot** explicitly initialize a member at the same time:
+
+```cpp
+struct X {
+    int a, b;
+    X(int aa, int bb): a(aa), b(bb) {}
+    X(int aa): X(aa, 0) {}
+    X(int aa): X(aa, 0), a(aa) {} // error
+};
+```
+
+Bases are initialized in the order of declaration. They are initialized before members of the derived class, and destroyed after members. Members are also constructed in the order declared in the class definition, and destructed in the reversed order:
+
+```cpp
+struct X1 { X1(int x); };
+struct X2 { X2(int x); };
+struct XX: X1, X2 {
+    int a1;
+    int a2;
+    XX(int x1, int x2, int a1, int a2)
+        : X2(x2), X1(x1), a2(a2), a1(a1) {}
+};
+// construction: X1 -> X2 -> a1 -> a2
+//  destruction: a2 -> a1 -> X2 -> X1
+```
+
+**Copy constructors** usually acquire resources so they may throw exceptions. **Copy assignments** may throw as well even if some of them don't have to acquire resources. Imagine if a matrix is copied to another one but it happens that they have different dimensions, we may throw an exception. **Move operations** transfer ownership of existing resources so they shouldn't throw exceptions.
+
+We should be especially careful about copy/move operations if a class contains pointer members. A shallow copy of an object containing pointers results in shared resources between objects. We may declare `shared_ptr` to wrap those pointers so that the user of the code will notice the shallow copy. We can either use a boolean flag to do copy-on-write:
+
+```cpp
+class Image {
+public:
+    Image(const Image&);
+    void write_block();
+private:
+    bool shared;
+    Data* data; // expensive resource
+    Data* clone();
+};
+
+Image::Image(const Image& img) // shallow copy
+    : shared{true}, data{img.data} {}
+
+void write_block() {
+    // deep copy only when we need 
+    // to write to a shared resource
+    if (shared) {
+        data = clone();
+        shared = false;
+    }
+    // write to own copy of data
+}
+```
+
+When copy/assign an object of the derived class to an object of the base class, the copy constructor/assignment of the **base** class will be called, which is called **slicing**. To avoid it:
+
+- Mark the copy constructor/assignment of the base class `= delete`
+- Make the base class a `private` or `protected` base in the definition of derived class
+
+If any constructor is declared, the default constructor will not be generated. For copy/move operations and the destructor, if any of them is declared, all others will not be generated. Sometimes the default implementation is more appropriate. For example, the default copy constructor guarantees to copy all member variables, while we may omit some of them in our own implementation. To get the default version back:
+
+```cpp
+struct X {
+    ~X() {} // no default copy/move operation provided anymore
+    X(const X&) = default; // restore default implementation
+};
+```
+
+Usage of `delete`:
+
+```cpp
+struct X {
+    X(int) = delete; // eliminate undesired conversion
+    void* operator new(size_t) = delete; // prevent allocation on free store
+};
+
+template<class T>
+T* clone(T* p) { return new T{*p}; }
+
+X* clone(X*) = delete; // eliminate a specification
+
 ```
