@@ -984,5 +984,100 @@ template<class T>
 T* clone(T* p) { return new T{*p}; }
 
 X* clone(X*) = delete; // eliminate a specification
+```
 
+## Chapter 18 Operator Overloading
+
+Use **user-defined literals** to enable expressions like `1.2_km`:
+
+```cpp
+long double operator"" _km(long double x) {
+    return x * 1000;
+}
+
+void f() {
+    long double distance = 1.2_km;
+    cout << distance << endl; // 1200
+}
+```
+
+Passing small objects by value might be more efficient since directly accessing an object is always faster than a reference.
+
+It is recommended to define operators that needs direct access to the representation of class within the class definition, and those simply produce a new value be defined as nonmember functions. Note that only for nonmember functions, the left-hand side can be other types that are convertable to the argument type:
+
+```cpp
+struct Complex {
+    double re, im;
+    Complex(double r = 0, double i = 0): re(r), im(i) {}
+    Complex& operator+=(Complex a) {
+        re += a.re;
+        im += a.im;
+        return *this;
+    }
+};
+
+Complex operator+(Complex a, Complex b) {
+    return a += b;
+}
+
+Complex f() {
+    return 1 + Complex{2, 3}; // LHS is not Complex
+}
+```
+
+The above overloading of `operator+` passes parameters by value, so we don't have to explicitly create a new object. Function `f` relies on constructors to convert `int` -> `double` -> `Complex`, so that we don't have to implement different versions of this function for different input types, and both LHS and RHS don't have to be `Complex`.
+
+Relying on constructors to convert types has some flaws:
+
+- Cannot convert to built-in types since they are not class
+- Cannot avoid to modify the definition of destination class
+
+Another way is to define a **user-defined conversion** function `X::operator T()`, where `X` is source type and `T` is destination type. Note that narrowing should be avoided. This function can be marked `explicit`, with which we may need to use `static_cast` to do explicit conversion:
+
+```cpp
+struct X {
+    int x;
+    X(int xx): x(xx) {}
+    operator int() const { return x; }
+    explicit operator string() const { return to_string(x); }
+};
+
+void f() {
+    X one{1}, two{2};
+    int i = two - one;
+    one = two - one;
+    string s1 = x; // error
+    string s2 = static_cast<string>(one); // ok
+}
+```
+
+Conversion to `bool` is a bit different. Other types can be "contextually converted to `bool`" without a cast:
+
+```cpp
+struct X {
+    bool b;
+    explicit operator bool() const { return b; }
+};
+
+void f() {
+    X x{true};
+    if (x) // ok. contextual convertion
+        bool b = x; // error
+}
+```
+
+For overload resolution, only one level of user-defined conversion will be considered, and built-in conversions are preferred over user-defined ones:
+
+```cpp
+struct X { X(int); };
+struct Y { Y(X); };
+
+void f(Y);
+void g(double);
+void g(X);
+
+void h() {
+    f(1); // error. int -> X -> Y requires two steps
+    g(1); // g(double) will be called instead of g(X)
+}
 ```
