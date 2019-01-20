@@ -119,8 +119,8 @@ string&& rc3 {func()};  // ok
 // actually rc2 and rc3 are lvalue now
 // && only means they came from rvalue
 
-string s2 = static_cast<string&&>(rc2);  // rc2 will be destructed
-string s3 = move(rc2);  // equivalent to static_cast
+string s2 = static_cast<string>(rc2);  // rc2 will be destructed
+string s3 = move(rc3);  // equivalent to static_cast
 ```
 
 ## Chapter 8 Structures, Unions, and Enumerations
@@ -248,7 +248,9 @@ What we overload is the first step, while the second step is done as usual. In t
 
 Note that we cannot use `delete` to deallocate the object since it was not allocated on the free store but by the manager, so we have to call the destructor explicitly and let the manager free the space. We can overload `delete` just like what we did to `new`, but we **cannot** call it by ourselves. It is actually used to handle the case where the constructor throws excpetions. See Wiki.
 
-`new X {...}` will construct the object on the free store, while `X {...}` will contruct in the local scope. We can do this to eliminate ambiguity:
+`new X {...}` will construct the object on the free store, while `X {...}` will contruct in the local scope. 
+
+To eliminate ambiguity:
 
 ```cpp
 struct X { int a, b; };
@@ -650,7 +652,7 @@ void g() {
 }
 ```
 
-If we just want to put functions in a namespace to avoid name clashes and not intend to expose them to the outside world, we can create a **unnamed** namespace:
+If we have variables and funtions that should be "global" only in the current file (*i.e.* `static`), we can put them in an **unnamed** namespace to avoid polluting the global namespace and name clashes:
 
 ```cpp
 namespace {
@@ -658,7 +660,7 @@ namespace {
 }
 
 // the unnamed namespace above is implicitly used here
-f();
+f(); // ok
 ```
 
 ## Chapter 15 Source Files and Programs
@@ -988,19 +990,6 @@ X* clone(X*) = delete; // eliminate a specification
 
 ## Chapter 18 Operator Overloading
 
-Use **user-defined literals** to enable expressions like `1.2_km`:
-
-```cpp
-long double operator"" _km(long double x) {
-    return x * 1000;
-}
-
-void f() {
-    long double distance = 1.2_km;
-    cout << distance << endl; // 1200
-}
-```
-
 Passing small objects by value might be more efficient since directly accessing an object is always faster than a reference.
 
 It is recommended to define operators that needs direct access to the representation of class within the class definition, and those simply produce a new value be defined as nonmember functions. Note that only for nonmember functions, the left-hand side can be other types that are convertable to the argument type:
@@ -1079,5 +1068,63 @@ void g(X);
 void h() {
     f(1); // error. int -> X -> Y requires two steps
     g(1); // g(double) will be called instead of g(X)
+}
+```
+
+## Chapter 19 Special Operators
+
+`->` is a unary postfix operator:
+
+```cpp
+class Ptr {
+    X* operator->();
+};
+
+void f(Ptr p) {
+    X* x = p.operator->();
+    p->m = 1; // (p.operator->())->m = 1
+}
+```
+
+The assignment is **redirected** to a member of the underlying object of type `X`. The return type should be a pointer of an object that we can apply `->` since an `->` is implicitly inserted. This is important for implementing smart pointers and iterators.
+
+Overloading increment and decrement ():
+
+```cpp
+class Ptr {
+    Ptr& operator++();   // prefix
+    Ptr operator++(int); // postfix
+    
+    Ptr& operator--();   // prefix
+    Ptr operator--(int); // postfix
+};
+```
+
+The parameter for postfix is a dummy placeholder to differentiate itself from prefix. Avoid to use postfix since in that case we need to create a temporary object to store the previous value.
+
+Overloading allocation and deallocation:
+
+```cpp
+class Ptr {
+    void* operator new(size_t);
+    void operator delete(void*, size_t);
+    
+    void* operator new[](size_t);
+    void operator delete[](void*, size_t);
+}
+```
+
+They are implicitly `static` so they cannot access `this`. The size to be (de)allocated is passed as a parameter, which is determined by the type of the object following `delete`, so that we don't have to store it in a variable. Note that if this class is subclassed, we should mark these operators `virtual`, otherwise if a pointer of the base type points an object of a derived type, `delete` may receive a wrong size.
+
+Use **user-defined literals** to enable expressions like `1.2_km`:
+
+```cpp
+long double operator"" _km(long double x) {
+    return x * 1000;
+}
+
+void f() {
+    long double distance = 1.2_km;
+    cout << distance << endl; // 1200
 }
 ```
