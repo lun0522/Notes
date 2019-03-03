@@ -16,15 +16,15 @@ Postfix declarator operators bind tighter than prefix ones, so `char* kings[]` i
 Use `::` to refer to the hidden global name:
 
 ```cpp
-int x = 1;  // global x
+int x = 1;    // global x
 
 void f() {
-    int x = 2;  // local x
-    ::x = 3;  // assign to the global x
-    for (int x = 0; x < 4; ++x) {...}
-    // this x is local to the scope of the loop
-    // no way to refer to the "local x" inside of this loop
-    int x = 5;  // error: cannot define x twice in the same scope
+  int x = 2;  // local x
+  ::x = 3;    // assign to the global x
+  for (int x = 0; x < 4; ++x) {...}
+  // this x is local to the scope of the loop
+  // no way to refer to the "local x" inside of this loop
+  int x = 5;  // error: cannot define x twice in the same scope
 }
 ```
 
@@ -44,19 +44,19 @@ switch (...) {
 Local variables (excluding global, namespace, `static`, etc) of built-in types are **not** initialized to `{}`:
 
 ```cpp
-int x {};  // 0
-int y;  // no well-defined value
+int x{};  // 0
+int y;    // no well-defined value
 
-int a1[100] {};  // all elements initilized to 0
-int a2[100];  // can be anything
+int a1[100]{};  // all elements initilized to 0
+int a2[100];    // can be anything
 
-vector<int> v1 {};
+vector<int> v1{};
 vector<int> v2;  // the same to v1
 ```
 
 To use the default initializer we have to use `{}` rather than `()`, since `X a();` is function calling instead of initialization.
 
-Note that when we use `auto`, for `auto x1 {1};` and `auto x2 {1, 2, 3};`, both `x1` and `x2` are deduced to be `initializer_list<int>`. Use `=` instead of `{}` with `auto` when we don't want a list.
+Note that when we use `auto`, for `auto x1{1};` and `auto x2{1, 2, 3};`, both `x1` and `x2` are deduced to be `initializer_list<int>`. Use `=` instead of `{}` with `auto` when we don't want a list.
 
 Use `decltype()` to deduce the type of an initialized variable. This is useful for generic programming:
 
@@ -78,9 +78,9 @@ a = b;  // error
 String literals are of type `const char[]`, and we cannot assign it to `char *` since we should not modify the string literal itself:
 
 ```cpp
-char *p1 = "how";  // error
+char *p1 = "how";        // error
 const char *p2 = "are";  // ok
-char a[] = "you";  // will make a copy, also ok
+char a[] = "you";        // will make a copy, also ok
 ```
 
 Multi-line string and raw string:
@@ -88,8 +88,8 @@ Multi-line string and raw string:
 ```cpp
 char a2[] = "long "
             "string";  // the same to "long string"
-string s1 {R"("long" "string")"}  // the same to ""long" "string""
-string s2 {R"(long
+string s1{R"("long" "string")"}  // the same to ""long" "string""
+string s2{R"(long
 string)"};  // the same to "long\nstring"
 ```
 
@@ -102,7 +102,7 @@ char a[] = "hello";
 const char* p1 = a;  // pointer to const char
 char const* p2 = a;  // pointer to const char
 char *const p3 = a;  // const pointer to char
-const char *const p4 = a; // const pointer to const char
+const char *const p4 = a;  // const pointer to const char
 ```
 
 For a `const` lvalue reference, the original object can be rvalue or of different type, in which case implicit type conversion is performed if necessary, the resulting value is **copied** to a temporary object, and a reference is created referencing to it. Although we cannot say `int& x = 2;`, we can say `const int& x = 2.0;` since a temporary object (a lvalue) holds 2.
@@ -110,12 +110,12 @@ For a `const` lvalue reference, the original object can be rvalue or of differen
 We can also use rvalue reference (`&&`) for temporary objects (so-called *destructive read*) (we do **not** use `const` here since moving implies modifying):
 
 ```cpp
-string s1 {"hello"};
+string s1{"hello"};
 string func();
 
-string&& rc1 {s1};  // error, cannot initialize with a lvalue
-string&& rc2 {"world"};  // ok
-string&& rc3 {func()};  // ok
+string&& rc1{s1};       // error, cannot initialize with a lvalue
+string&& rc2{"world"};  // ok
+string&& rc3{func()};   // ok
 // actually rc2 and rc3 are lvalue now
 // && only means they came from rvalue
 
@@ -141,9 +141,9 @@ To avoid a misuse of a variable, we can initialize a variable in the condition o
 
 ```cpp
 if (double d = 3.0) {  // value of d is converted to boolean
-    // do something
+  // do something
 } else {
-    // d is also valid in this branch
+  // d is also valid in this branch
 }
 ```
 
@@ -159,10 +159,10 @@ and overload the prefix operator `++` for the iterator if necessary. We can use 
 If a temporary object is not bound to a `const` lvalue reference or used to initialize a named object, it will be destroyed at the end of the full expression:
 
 ```cpp
-string s1 {"hello"};
-string s2 {"world"};
-size_t length = strlen((s1 + s2).c_str()); // ok
-const char* cs = (s1 + s2).c_str(); // using cs may cause error
+string s1{"hello"};
+string s2{"world"};
+size_t length = strlen((s1 + s2).c_str());  // ok
+const char* cs = (s1 + s2).c_str();  // using `cs` may cause error
 ```
 
 `constexpr` must be of literal types (including integral, float-point, enumerator and arrays of them). We may use functions with `constexpr` return type to initialize it:
@@ -185,10 +185,10 @@ String literals are allocated on the staic memory, so:
 
 ```cpp
 void f() {
-    constexpr const char* p1 = "hello"; // ok
-    constexpr const char* p2 = new char(5); // error, it is allocated on the free store
-    static const char a[] = "world";
-    constexpr const char* p3 = a; // ok
+  constexpr const char* p1 = "hello";  // ok
+  constexpr const char* p2 = new char(5);  // error, it is allocated on the free store
+  static const char a[] = "world";
+  constexpr const char* p3 = a;  // ok
 }
 ```
 
@@ -207,7 +207,7 @@ int i = (p) ? *p : throw runtime_error{"unexpected nullptr"};
 If `new` cannot allocate enough space for the object, it will throw `std::bad_alloc`. We can use `std::set_new_handler` to deal with it. We can also pass `std::nothrow` to avoid throwing exceptions, in which case `nullptr` will be returned if there is no enough space:
 
 ```cpp
-int* p = new(nothrow) int[10000]; // p may be nullptr
+int* p = new(nothrow) int[10000];  // p may be nullptr
 if (!p) {...}
 operator delete(p, nothrow);
 ```
@@ -215,27 +215,27 @@ operator delete(p, nothrow);
 The `new` operator can be overloaded. We can have a memory management class:
 
 ```cpp
-class Arena { // memory manager
-public:
-    void* alloc(size_t sz);
-    void free(void* p);
+class Arena {  // memory manager
+ public:
+  void* alloc(size_t sz);
+  void free(void* p);
 };
 
 class X {
-public:
-    X(int v) : val(v) {}
-    void* operator new(size_t sz, Arena* a) { return a->alloc(sz); }
-private:
-    int val;
+ public:
+  X(int v) : val(v) {}
+  void* operator new(size_t sz, Arena* a) { return a->alloc(sz); }
+ private:
+  int val;
 };
 
 extern Arena* storage;
 
 void f() {
-    X* p = new(storage) X {3};
-    // use p
-    p->~X();
-    storage->free(p);
+  X* p = new(storage) X{3};
+  // use p
+  p->~X();
+  storage->free(p);
 }
 ```
 
@@ -244,11 +244,11 @@ void f() {
 1. allocate enough space (don't care about the object type)
 2. cast `void*` to `X*` and call the constructor
 
-What we overload is the first step, while the second step is done as usual. In the line `X* p = new(storage) X {3};`, `X` is used to calculate the first argument `sz`, so we only have to pass one argument of type `Arena*` to `new`, which is called placement `new`. After that, `3` is sent to the constructor.
+What we overload is the first step, while the second step is done as usual. In the line `X* p = new(storage) X{3};`, `X` is used to calculate the first argument `sz`, so we only have to pass one argument of type `Arena*` to `new`, which is called placement `new`. After that, `3` is sent to the constructor.
 
 Note that we cannot use `delete` to deallocate the object since it was not allocated on the free store but by the manager, so we have to call the destructor explicitly and let the manager free the space. We can overload `delete` just like what we did to `new`, but we **cannot** call it by ourselves. It is actually used to handle the case where the constructor throws excpetions. See Wiki.
 
-`new X {...}` will construct the object on the free store, while `X {...}` will contruct in the local scope. 
+`new X{...}` will construct the object on the free store, while `X{...}` will contruct in the local scope. 
 
 To eliminate ambiguity:
 
@@ -256,33 +256,33 @@ To eliminate ambiguity:
 struct X { int a, b; };
 struct XX { double a, b; };
 void f(X);
-void f(XX); // overloaded
+void f(XX);     // overloaded
 
 void g() {
-    f({1, 2}); // error, ambiguous
-    f(X {1, 2}); // ok
-    f(XX {1, 2}); // ok
+  f({1, 2});    // error, ambiguous
+  f(X{1, 2});   // ok
+  f(XX{1, 2});  // ok
 }
 ```
 
 To create a `std::initializer_list`, elements between curly braces are copied (and converted to the target format if necessary) to the underlying array of `initializer_list`. It is **immutable**, and thus when we use it to initialize another object (eg: `std::vector`), elements are copied rather than moved to the new object. If we directly use a `{}`-list for constructor arguments or to initilize an aggregate, elements won't be copied (unless as by-value arguments):
 
 ```cpp
-int v1 {1}; // direct initialization
-int v2 = {2}; // copy initialization
+int v1{1};     // direct initialization
+int v2 = {2};  // copy initialization
 ```
 
 We can use `initializer_list` to deal with immutable homogenous lists with varying lengths:
 
 ```cpp
 int sum(initializer_list<int> val) {
-    int s = 0;
-    for (auto v : val) s += v;
-    return s;
+  int s = 0;
+  for (auto v : val) s += v;
+  return s;
 }
 
 sum({1, 3, 5, 7, 9});
-sum({1.0, 3, 5, 7, 9.0}); // error, not homogenous
+sum({1.0, 3, 5, 7, 9.0});  // error, not homogenous
 ```
 
 Note that the compiler does not deduce the type of the entire list. We still have to specify the container type because of the language restriction:
@@ -291,18 +291,18 @@ Note that the compiler does not deduce the type of the entire list. We still hav
 template<typename T>
 void f1(T);
 
-f1({1, 2, 3}); // won't compile
+f1({1, 2, 3});  // won't compile
 
 template<typename T>
 void f2(const initializer_list<T>&);
 
-f2({1, 2, 3}); // ok
+f2({1, 2, 3});  // ok
 
 template<typename T>
 void f3(const vector<T>&);
 
-f3({1, 2, 3}); // error
-f3(vector<int>{1, 2, 3}); // ok
+f3({1, 2, 3});  // error
+f3(vector<int>{1, 2, 3});  // ok
 ```
 
 Forms of capture lists of lambda expressions:
@@ -321,18 +321,18 @@ To modify the state of a variable captured by value, we can declare `mutable` be
 ```cpp
 int x = 10;
 auto func1 = [&x] () { x += 10; };
-func1(); // x becomes 20
+func1();  // x becomes 20
 auto func2 = [x] () mutable { x += 10; };
-func2(); // x becomes 30, but still 20 to the outside world
-func2(); // x becomes 40, but still 20 to the outside world
+func2();  // x becomes 30, but still 20 to the outside world
+func2();  // x becomes 40, but still 20 to the outside world
 ```
 
 The return type of lambda expressions can be deduced by the compiler. If a lambda does not take parameters, we can omit `()`, but if we specify a return type with `->` or declare `mutable`, `()` can not be ommited. We can specify the type of lambda as `std::function<return-type (arguments-list)>`. This is necessary for recursion, because if we use `auto`, the type of itself has not been deduced inside of its body, and thus we cannot call itself recursively. Example for recursion:
 
 ```cpp
 function<int (int, int)> gcd = [&gcd] (int a, int b) {
-    if (b == 0) return a;
-    return gcd(b, a % b);
+  if (b == 0) return a;
+  return gcd(b, a % b);
 };
 ```
 
@@ -360,8 +360,8 @@ void f(int(&r)[4]);
 
 int a1[] = {1, 2, 3, 4};
 int a2[] = {1, 2};
-f(a1); // ok
-f(a2); // error, different length
+f(a1);  // ok
+f(a2);  // error, different length
 ```
 
 To be more flexible, we can put the length in template, which may create too many definitions for different lengths:
@@ -370,29 +370,29 @@ To be more flexible, we can put the length in template, which may create too man
 template<typename T, int N>
 void f(T(&r)[N]) {}
 
-f(a1); // ok
-f(a2); // ok
+f(a1);  // ok
+f(a2);  // ok
 ```
 
 When we cannot specify the number and types of parameters of a function, in addition to variadic templates and `initializer_list`, we can also put `...` at the end of the parameter list to indicate there are more parameters to come (of unknown types):
 
 ```cpp
-#include <cstdarg> // declares all macros with prefix `va_`
+#include <cstdarg>  // declares all macros with prefix `va_`
 
-void error(int severity ...) { // we know nothing about other params except severity
-    va_list ap;
-    // specify the name of the last known parameter as the second parameter
-    va_start(ap, severity);
-    
-    while (true) {
-        char* p = va_arg(ap, char*); // assume following params are char*
-        if (!p) break;
-        cerr << p << ' ';
-    }
-    
-    cerr << endl;
-    va_end(ap); // paired with va_start
-    if (severity) exit(severity);
+void error(int severity ...) {  // we know nothing about other params except severity
+  va_list ap;
+  // specify the name of the last known parameter as the second parameter
+  va_start(ap, severity);
+
+  while (true) {
+    char* p = va_arg(ap, char*);  // assume following params are char*
+    if (!p) break;
+      cerr << p << ' ';
+  }
+
+  cerr << endl;
+  va_end(ap);  // paired with va_start
+  if (severity) exit(severity);
 } 
 ```
 
@@ -402,11 +402,11 @@ To call a constructor from another constructor (alternative way is to use defaul
 
 ```cpp
 class complex {
-private:
-    double re, im;
-public:
-    complex(double r, double i) : re{r}, im{i} {}
-    complex() : complex{0, 0} {}
+ public:
+  complex(double r, double i) : re{r}, im{i} {}
+  complex() : complex{0, 0} {}
+ private:
+  double re, im;
 };
 ```
 
@@ -414,17 +414,17 @@ The compiler only makes sure the default value has the right type. Its value can
 
 ```cpp
 struct X {
-    int val;
-    static int config;
-    X(int v = config) : val{v} {}
+  int val;
+  static int config;
+  X(int v = config) : val{v} {}
 };
 
 int X::config = 1;
 
 void f() {
-    X x1 {}; // x1.val should be 1
-    x1.config = 2; // or `X::config = 1;`
-    X x2 {}: // x2.val should be 2
+  X x1{};  // `x1.val` should be 1
+  x1.config = 2;  // or `X::config = 1;`
+  X x2{}:  // `x2.val` should be 2
 }
 ```
 
@@ -439,10 +439,10 @@ void error(string s) {}
 void (*fct)(string);
 
 void f() {
-    fct = &error;
-    fct = error; // also works
-    (*fct)("hello");
-    fct("world"); // also works
+  fct = &error;
+  fct = error;   // also works
+  (*fct)("hello");
+  fct("world");  // also works
 }
 ```
 
@@ -450,16 +450,16 @@ A pointer to function must reflect the linkage (`extern`) of it, while reflectio
 
 ```cpp
 extern "C" void error(string s) noexcept {}
-extern "C" void (*fct1)(string) = &error; // lose useful information
-void (*fct2)(string) = &error; // mismatch
+extern "C" void (*fct1)(string) = &error;  // lose useful information
+void (*fct2)(string) = &error;  // mismatch
 ```
 
 Note that we **cannot** reflect the linkage or exception if we use the `using`-directives:
 
 ```cpp
 using P1 = void(int);
-using P2 = extern "C" void(int); // error
-using P3 = void(int) noexcept; // error
+using P2 = extern "C" void(int);  // error
+using P3 = void(int) noexcept;    // error
 ```
 
 Avoid macros. We may use some pre-defined ones:
@@ -482,22 +482,22 @@ We may subclass a standard library exception (including `runtime_error`, `out_of
 
 ```cpp
 struct MyError1 : std::runtime_error {
-    const char* what() const noexcept { return "error 1"; }
+  const char* what() const noexcept { return "error 1"; }
 };
 
 struct MyError2 : std::out_of_range {
-    const char* what() const noexcept { return "error 2"; }
+  const char* what() const noexcept { return "error 2"; }
 };
 
 void f() {
-    try {...}
-    catch (std::exception& e) { // catch MyError1 or MyError2
-        cerr << e.what() << endl;
-    }
-    catch (...) { // for all other types of exceptions, clean up and rethrow
-        // clean up
-        throw;
-    }
+  try {...}
+  catch (const std::exception& e) {  // catch MyError1 or MyError2
+    cerr << e.what() << endl;
+  }
+  catch (...) {  // for all other types of exceptions, clean up and rethrow
+    // clean up
+    throw;
+  }
 }
 ```
 
@@ -523,10 +523,10 @@ We can use a `try`-block as the body of a function. This may be useful for const
 
 ```cpp
 struct X {
-    int vi, vs;
-    X(int v1, int v2) try
-    : vi(v1), vs(v2) {...}
-    catch (std::exception& e) {...}
+  int vi, vs;
+  X(int v1, int v2) try
+    : vi{v1}, vs{v2} {...}
+  catch (const std::exception& e) {...}
 };
 ```
 
@@ -539,13 +539,15 @@ To handle an exception on a different thread, use `current_exception` to transfe
 Argument-dependent lookup means when a function is called, the compiler don't just lookup the implementation of it in the current namespace, but also namespaces of its auguments:
 
 ```cpp
-namespace Chrono {
-    class Date {...};
-    bool operator==(const Date&, const std::string&);
+namespace chrono {
+
+class Date {...};
+bool operator==(const Date&, const std::string&);
+
 }
 
-void f(Chrono::Date d, std::string s) {
-    if (d == s) {...} // implemented in namespace Chrono
+void f(chrono::Date d, std::string s) {
+  if (d == s) {...}  // implemented in namespace Chrono
 }
 ```
 
@@ -558,13 +560,17 @@ Rules of associated namespaces (AN):
 Namespaces are open, so we can add functions to namespaces in another place, or separate the interface with the implementation:
 
 ```cpp
-namespace Mine {
-    void f(); // declaration
+namespace mine {
+
+void f();  // declaration
+
 }
 
-namespace Mine {
-    void f() {...} // implementation
-    void g(); // add `g()` to `Mine`
+namespace mine {
+
+void f() {...}  // implementation
+void g();  // add `g()` to `Mine`
+
 }
 
 Mine::g() {...}
@@ -573,38 +579,46 @@ Mine::g() {...}
 For large projects, we may want to separate it into a user interface (which is stable) and an implementer interface (which may change a lot):
 
 ```cpp
-namespace Mine {
-    void f();
+namespace mine {
+
+void f();
+
 }
 
-namespace Mine_impl {
-    void f();
-    void helper1();
-    void helper2();
+namespace mine_impl {
+
+void f();
+void helper1();
+void helper2();
+
 }
 ```
 
 We can use alias to represent namespaces whose names are too long:
 
 ```cpp
-namespace Foundation_library_v2r11 {...}
-namespace Lib = Foundation_library_v2r11;
+namespace foundation_library_v2r11 {...}
+namespace fib = foundation_library_v2r11;
 ```
 
 If an explicitly qualified name (like `B::String` below) cannot be found in the namespace (like `B`), the compiler will look for `using`-directives within that namespace, and go to the mentioned namespaces (like `A`) to find the name:
 
 ```cpp
 namespace A {
-    class String {...};
-    void f();
+
+class String {...};
+void f();
+
 }
 
 namespace B {
-    using namespace A;
+
+using namespace A;
+
 }
 
-void g(B::String); // this works
-void B::f() {...} // this won't work! should use void A::f()
+void g(B::String);  // this works
+void B::f() {...}   // this won't work! should use void A::f()
 ```
 
 We can use this to extend an exisitng namespace, since everything in `A` is inherited by `B`. Note this doesn't work when we are to define something.
@@ -613,42 +627,54 @@ Use both `using`-**directives** (use the entire namespace) and `using`-**declara
 
 ```cpp
 namespace A {
-    class String {...};
-    class Vector {...};
+
+class String {...};
+class Vector {...};
+
 }
 
 namespace B {
-    class String {...};
-    class List {...};
+
+class String {...};
+class List {...};
+
 }
 
 namespace C {
-    using namespace A;
-    using namespace B;
-    using B::String;
-    class List {...};
-    // here we can use `Vector` in A, `String` in B, 
-    // and `List` in C without stating namespaces
+
+using namespace A;
+using namespace B;
+using B::String;
+class List {...};
+// here we can use `Vector` in A, `String` in B, 
+// and `List` in C without stating namespaces
+
 }
 ```
 
 Namespaces can be nested. For example, inner namespaces might be the different version of the same library, in which case we can use `inline` to specify which version is used by default:
 
 ```cpp
-namespace Mine {
-    namespace V1 {
-        void f();
-    }
-    
-    inline namespace V2 {
-        void f();
-    }
+namespace mine {
+
+namespace v1 {
+
+void f();
+
+}
+  
+inline namespace v2 {
+
+void f();
+
 }
 
-using namespace Mine;
+}
+
+using namespace mine;
 void g() {
-    f();     // calls `Mine::V2::f()`
-    V1::f(); // calls `Mine::V1::f()`
+  f();      // calls `Mine::V2::f()`
+  V1::f();  // calls `Mine::V1::f()`
 }
 ```
 
@@ -656,7 +682,7 @@ If we have variables and funtions that should be "global" only in the current fi
 
 ```cpp
 namespace {
-    void f() {...}
+  void f() {...}
 }
 
 // the unnamed namespace above is implicitly used here
@@ -698,13 +724,13 @@ Do **not** put these in header files:
 Use `extern "C"` to tell the compiler not to mangle the function name of legacy C code:
 
 ```cpp
-extern "C" int a1; // declaration
+extern "C" int a1;  // declaration
 extern "C" void f1();
 extern "C" {
-    int a2; // definition
-    extern int a3; // declaration
-    void f2();
-    #include <string.h>
+  int a2;  // definition
+  extern int a3;  // declaration
+  void f2();
+  #include <string.h>
 }
 ```
 
@@ -714,8 +740,8 @@ Another way to enclose declarations of C functions is to modify the C header fil
 #ifdef __cplusplus
 extern "C" {
 #endif
-    int strcmp(const char*, const char*);
-    int strlen(const char*);
+  int strcmp(const char*, const char*);
+  int strlen(const char*);
 #ifdef __cplusplus
 }
 #endif
@@ -727,17 +753,17 @@ Previously we tried to separate the interface from implementation by creating tw
 
 ```cpp
 // parser.h
-namespace Parser { // interface for the user
-    double expr(bool get);
+namespace parser {   // interface for the user
+  double expr(bool get);
 }
 
 // parser_impl.h
-#include "parser.h" // let the compiler check consistency
+#include "parser.h"  // let the compiler check consistency
 
-namespace Parser { // interface for the implementer
-    double expr(bool get);
-    double term(bool get);
-    double expr(bool get);
+namespace parser {   // interface for the implementer
+  double expr(bool get);
+  double term(bool get);
+  double expr(bool get);
 }
 ```
 
@@ -747,8 +773,8 @@ Putting a global variable in a function so that it is not initialized until used
 
 ```cpp
 int& use_count() {
-    static int uc = 0;
-    return uc;
+  static int uc = 0;
+  return uc;
 }
 ```
 
@@ -768,17 +794,18 @@ Use `explicit` to avoid implicit conversion, especially for signle-argument cons
 
 ```cpp
 class X {
-    int x;
-public:
-    explicit X(int v);
+ public:
+  explicit X(int v);
+ private:
+  int x;
 };
 
-X::X(int v) : x(v) {} // no need to specify `explicit` again
+X::X(int v) : x{v} {}  // no need to specify `explicit` again
 
-X x1 {1};    // ok
-X x2 = X{1}; // ok. move constructor may be called
-X x3 = {1};  // error
-X x4 = 1;    // error
+X x1{1};      // ok
+X x2 = X{1};  // ok. move constructor may be called
+X x3 = {1};   // error
+X x4 = 1;     // error
 ```
 
 The member function defined within the class definition is implicitly inlined. It should be small, rarely modified and frequently used.
@@ -789,22 +816,23 @@ If a member variable is marked `mutable`, it can be modified even if it is in a 
 
 ```cpp
 class Date {
-    int d, m, y;
-    static const int x1 = 1; // fine
-    static const float x2 = 0.1; // error
-    static Date default_date; // only declaration
-public:
-    Date(int dd = 0, int mm = 0, int yy = 0) {
-        d = dd ? dd : default_date.d;
-        m = mm ? mm : default_date.m;
-        y = yy ? yy : default_date.y;
-    }
+ public:
+  Date(int dd = 0, int mm = 0, int yy = 0) {
+    d = dd ? dd : default_date.d;
+    m = mm ? mm : default_date.m;
+    y = yy ? yy : default_date.y;
+  }
+ private:
+  int d, m, y;
+  static const int x1 = 1;      // fine
+  static const float x2 = 0.1;  // error
+  static Date default_date;     // only declaration
 };
 
-Date Date::default_date {1, 1, 1970}; // definition
+Date Date::default_date{1, 1, 1970};  // definition
 void f(Date);
 void g() {
-    f({}); // equivalent to passing a copy of Date::default_date
+  f({});  // equivalent to passing a copy of Date::default_date
 }
 
 ```
@@ -814,26 +842,27 @@ A member class (also called nested class) can access types and `static` member v
 If a function is associated with a class, but does not need to directly access `private` members, instead of making it a member function, we can put it outside of the class definition but within the same enclosing namespace, so that the interface of the class is simpler and we can still use those functions via argument-dependent lookup:
 
 ```cpp
-namespace Chrono {
-    class Date {
-        int d, m, y;
-    public:
-        Date (int=0, int=0, int=0);
-    };
-    
-    bool operator==(const Date& a, const Date& b);
-    const Date& default_date() { // lazy static variable
-        static Date d {1, 1, 1970};
-        return d;
-    }
-    
-    // constructor should be able to see `default_date()`
-    // so it must be defined outside of the class denition
-    Date::Date(int dd, int mm, int yy) {
-        d = dd ? dd : default_date().d;
-        m = mm ? mm : default_date().m;
-        y = yy ? yy : default_date().y;
-    }
+namespace chrono {
+  class Date {
+   public:
+    Date (int=0, int=0, int=0);
+   private:
+    int d, m, y;
+  };
+
+  bool operator==(const Date& a, const Date& b);
+  const Date& default_date() {  // lazy static variable
+    static Date d{1, 1, 1970};
+    return d;
+  }
+
+  // constructor should be able to see `default_date()`
+  // so it must be defined outside of the class denition
+  Date::Date(int dd, int mm, int yy) {
+    d = dd ? dd : default_date().d;
+    m = mm ? mm : default_date().m;
+    y = yy ? yy : default_date().y;
+  }
 }
 ```
 
@@ -843,14 +872,15 @@ We can mark a destructor `= delete` to prevent from allocation on stack. However
 
 ```cpp
 class X {
-    ~X();
 public:
-    void destroy() { this->~X(); }
+  void destroy() { this->~X(); }
+private:
+  ~X();
 };
 
 void f() {
-    X* x = new X(); // cannot allocate on stack anymore
-    x->destroy(); // cannot `delete x` anymore
+  X* x = new X();  // cannot allocate on stack anymore
+  x->destroy();    // cannot `delete x` anymore
 }
 ```
 
@@ -860,17 +890,17 @@ For local variables and free-store objects, if we don't use any constructor, mem
 
 ```cpp
 class Y {
-    char buf[1024];
-    Date date;
+  char buf[1024];
+  Date date;
 };
 
-Y y0; // static object, fully initialized
-      // `buf` is filled with 0
+Y y0;  // static object, fully initialized
+       // `buf` is filled with 0
 
 void f() {
-    Y y1 {}; // constructor is called, fully initialized
-    Y y2; // local variable, `buf` is uninitialized 
-          // while `date` is set to default date
+  Y y1{};  // constructor is called, fully initialized
+  Y y2;    // local variable, `buf` is uninitialized 
+           // while `date` is set to default date
 }
 ```
 
@@ -882,10 +912,10 @@ Containers are able to use elements in initilizer lists to construct their conte
 struct X { X(string); };
 
 void f() {
-    X a1[10]; // error, cannot initlize
-    X a2[] {string{"alpha"}, string{"beta"}}; // constructs two elements
-    vector<X> v1; // fine, no element
-    vector<X> v2 {string{"alpha"}, string{"beta"}}; // constructs two elements
+  X a1[10];  // error, cannot initlize
+  X a2[] {string{"alpha"}, string{"beta"}};  // constructs two elements
+  vector<X> v1;  // fine, no element
+  vector<X> v2{string{"alpha"}, string{"beta"}};  // constructs two elements
 }
 ```
 
@@ -901,18 +931,18 @@ The constructor can initialize the base, but **cannot** initialize the base of b
 ```cpp
 struct X { X(int); };
 struct XX: X { XX(int); };
-struct X1: XX { X1(int a):  X(a) {} }; // error
-struct X2: XX { X2(int a): XX(a) {} }; // ok
+struct X1: XX { X1(int a):  X(a) {} };  // error
+struct X2: XX { X2(int a): XX(a) {} };  // ok
 ```
 
 The constructor can also delegate to another constructor, but it **cannot** explicitly initialize a member at the same time:
 
 ```cpp
 struct X {
-    int a, b;
-    X(int aa, int bb): a(aa), b(bb) {}
-    X(int aa): X(aa, 0) {}
-    X(int aa): X(aa, 0), a(aa) {} // error
+  int a, b;
+  X(int aa, int bb): a{aa}, b{bb} {}
+  X(int aa): X{aa, 0} {}
+  X(int aa): X{aa, 0}, a{aa} {}  // error
 };
 ```
 
@@ -922,10 +952,10 @@ Bases are initialized in the order of declaration. They are initialized before m
 struct X1 { X1(int x); };
 struct X2 { X2(int x); };
 struct XX: X1, X2 {
-    int a1;
-    int a2;
-    XX(int x1, int x2, int a1, int a2)
-        : X2(x2), X1(x1), a2(a2), a1(a1) {}
+  int a1;
+  int a2;
+  XX(int x1, int x2, int a1, int a2)
+    : X2{x2}, X1{x1}, a2{a2}, a1{a1} {}
 };
 // construction: X1 -> X2 -> a1 -> a2
 //  destruction: a2 -> a1 -> X2 -> X1
@@ -937,26 +967,26 @@ We should be especially careful about copy/move operations if a class contains p
 
 ```cpp
 class Image {
-public:
-    Image(const Image&);
-    void write_block();
-private:
-    bool shared;
-    Data* data; // expensive resource
-    Data* clone();
+ public:
+  Image(const Image&);
+  void write_block();
+ private:
+  bool shared;
+  Data* data;  // expensive resource
+  Data* clone();
 };
 
-Image::Image(const Image& img) // shallow copy
+Image::Image(const Image& img)  // shallow copy
     : shared{true}, data{img.data} {}
 
 void write_block() {
-    // deep copy only when we need 
-    // to write to a shared resource
-    if (shared) {
-        data = clone();
-        shared = false;
-    }
-    // write to own copy of data
+  // deep copy only when we need 
+  // to write to a shared resource
+  if (shared) {
+    data = clone();
+    shared = false;
+  }
+  // write to own copy of data
 }
 ```
 
@@ -969,8 +999,8 @@ If any constructor is declared, the default constructor will not be generated. F
 
 ```cpp
 struct X {
-    ~X() {} // no default copy/move operation provided anymore
-    X(const X&) = default; // restore default implementation
+  ~X() {}  // no default copy/move operation provided anymore
+  X(const X&) = default;  // restore default implementation
 };
 ```
 
@@ -978,14 +1008,14 @@ Usage of `delete`:
 
 ```cpp
 struct X {
-    X(int) = delete; // eliminate undesired conversion
-    void* operator new(size_t) = delete; // prevent allocation on free store
+  X(int) = delete;  // eliminate undesired conversion
+  void* operator new(size_t) = delete;  // prevent allocation on free store
 };
 
 template<class T>
 T* clone(T* p) { return new T{*p}; }
 
-X* clone(X*) = delete; // eliminate a specification
+X* clone(X*) = delete;  // eliminate a specification
 ```
 
 ## Chapter 18 Operator Overloading
@@ -996,21 +1026,21 @@ It is recommended to define operators that needs direct access to the representa
 
 ```cpp
 struct Complex {
-    double re, im;
-    Complex(double r = 0, double i = 0): re(r), im(i) {}
-    Complex& operator+=(Complex a) {
-        re += a.re;
-        im += a.im;
-        return *this;
-    }
+  double re, im;
+  Complex(double r = 0, double i = 0): re{r}, im{i} {}
+  Complex& operator+=(Complex a) {
+    re += a.re;
+    im += a.im;
+    return *this;
+  }
 };
 
 Complex operator+(Complex a, Complex b) {
-    return a += b;
+  return a += b;
 }
 
 Complex f() {
-    return 1 + Complex{2, 3}; // LHS is not Complex
+  return 1 + Complex{2, 3};  // LHS is not Complex
 }
 ```
 
@@ -1025,18 +1055,18 @@ Another way is to define a **user-defined conversion** function `X::operator T()
 
 ```cpp
 struct X {
-    int x;
-    X(int xx): x(xx) {}
-    operator int() const { return x; }
-    explicit operator string() const { return to_string(x); }
+  int x;
+  X(int xx): x{xx} {}
+  operator int() const { return x; }
+  explicit operator string() const { return to_string(x); }
 };
 
 void f() {
-    X one{1}, two{2};
-    int i = two - one;
-    one = two - one;
-    string s1 = x; // error
-    string s2 = static_cast<string>(one); // ok
+  X one{1}, two{2};
+  int i = two - one;
+  one = two - one;
+  string s1 = x;  // error
+  string s2 = static_cast<string>(one);  // ok
 }
 ```
 
@@ -1044,14 +1074,14 @@ Conversion to `bool` is a bit different. Other types can be "contextually conver
 
 ```cpp
 struct X {
-    bool b;
-    explicit operator bool() const { return b; }
+  bool b;
+  explicit operator bool() const { return b; }
 };
 
 void f() {
-    X x{true};
-    if (x) // ok. contextual convertion
-        bool b = x; // error
+  X x{true};
+  if (x)         // ok. contextual convertion
+    bool b = x;  // error
 }
 ```
 
@@ -1066,8 +1096,8 @@ void g(double);
 void g(X);
 
 void h() {
-    f(1); // error. int -> X -> Y requires two steps
-    g(1); // g(double) will be called instead of g(X)
+  f(1);  // error. int -> X -> Y requires two steps
+  g(1);  // g(double) will be called instead of g(X)
 }
 ```
 
@@ -1077,12 +1107,12 @@ void h() {
 
 ```cpp
 class Ptr {
-    X* operator->();
+  X* operator->();
 };
 
 void f(Ptr p) {
-    X* x = p.operator->();
-    p->m = 1; // (p.operator->())->m = 1
+  X* x = p.operator->();
+  p->m = 1;  // (p.operator->())->m = 1
 }
 ```
 
@@ -1092,11 +1122,11 @@ Overloading increment and decrement ():
 
 ```cpp
 class Ptr {
-    Ptr& operator++();   // prefix
-    Ptr operator++(int); // postfix
-    
-    Ptr& operator--();   // prefix
-    Ptr operator--(int); // postfix
+  Ptr& operator++();    // prefix
+  Ptr operator++(int);  // postfix
+
+  Ptr& operator--();    // prefix
+  Ptr operator--(int);  // postfix
 };
 ```
 
@@ -1106,25 +1136,78 @@ Overloading allocation and deallocation:
 
 ```cpp
 class Ptr {
-    void* operator new(size_t);
-    void operator delete(void*, size_t);
-    
-    void* operator new[](size_t);
-    void operator delete[](void*, size_t);
+  void* operator new(size_t);
+  void operator delete(void*, size_t);
+
+  void* operator new[](size_t);
+  void operator delete[](void*, size_t);
 }
 ```
 
 They are implicitly `static` so they cannot access `this`. The size to be (de)allocated is passed as a parameter, which is determined by the type of the object following `delete`, so that we don't have to store it in a variable. Note that if this class is subclassed, we should mark these operators `virtual`, otherwise if a pointer of the base type points an object of a derived type, `delete` may receive a wrong size.
 
-Use **user-defined literals** to enable expressions like `1.2_km`:
+Use **user-defined literals** to enable expressions like `1.2_km`. Note that the standard library reserves all suffixes not starting with an `_`, and we'd better put these literals in a separate namespace for selective use:
 
 ```cpp
 long double operator"" _km(long double x) {
-    return x * 1000;
+  return x * 1000;
+}
+
+string operator"" _s(const char* p, size_t n) {
+  return string{p, n};
 }
 
 void f() {
-    long double distance = 1.2_km;
-    cout << distance << endl; // 1200
+  long double distance = 1.2_km;
+  cout << distance << endl;   // 1200
+  cout << "Hello"_s << endl;  // converted to a `string`
 }
+```
+
+There are four kinds of literals that can be defined:
+
+- Integer literal (taking `unsigned long long` or `const char*`)
+- Floating-point litral (taking `long double` or `const char*`)
+- String literal (taking a <`const char*`, `size_t`> pair)
+- Character literal (taking `char`, `wchar_t`, `char16_t` or `char32_t`)
+
+With `friend` declarations within the definition of a class, it can grant access to private fields to other function/class:
+
+```cpp
+void f() {...};
+
+class ListIterator {...};
+
+class List {
+ public:
+  friend void ::f();
+  friend class ListIterator;
+  // following function is a non-member friend function
+  friend ostream& operator<<(ostream& os, const List& list);
+ private:
+  // accessible for f() and all methods in ListIterator
+  size_t size;
+  int* data;
+};
+```
+
+A friend function/class must be declared before the class to which they are friend, or in the same enclosing namspace:
+
+```cpp
+class C1;  // ok
+
+namespace {
+
+class CX {
+public:
+friend class C1;
+friend class C2;
+friend class C3;
+}
+  
+class C2;  // ok
+
+}  // namespace
+
+class C3;  // error: not a friend of CX
 ```
