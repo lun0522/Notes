@@ -24,7 +24,7 @@ void f() {
   for (int x = 0; x < 4; ++x) {...}
   // this x is local to the scope of the loop
   // no way to refer to the "local x" inside of this loop
-  int x = 5;  // error: cannot define x twice in the same scope
+  int x = 5;  // error, cannot define x twice in the same scope
 }
 ```
 
@@ -430,7 +430,30 @@ void f() {
 
 Note that the space for default pointer-type parameters matters. For example, `int f(char* = nullptr);` is good, while `int f(char*= nullptr)` has a syntax error because of `*=`.
 
-For function overloading, the return type is not considered for overload resolution. Overloading across class or namespace is not enabled by default. For example, in a derived class, a method in the base class won't be considered for overload resolution. If we want that overloading happen, we have to use the `using`-directives or argument dependent lookup.
+For function overloading, the return type is not considered for overload resolution. Overloading across class or namespace is not enabled by default (we should consider a class as a namespace here). For example, in a derived class, a method in the base class won't be considered for overload resolution. If we want that overloading happen, we have to use the `using`-directives or argument dependent lookup:
+
+```cpp
+struct X {
+  void f(int);
+};
+
+struct X1 {
+  void f(double);
+}
+
+struct X2 {
+  using X::f;
+  void f(double);
+}
+
+void g(X1 x1, X2 x2) {
+  x1.f(1);  // calls X1::f(double)
+  X& x = x1;
+  x.f(1);  // calls X::f(int)
+
+  x2.f(1);  // calls X2::f(int), which is X::f(int)
+}
+```
 
 To take a pointer to a function, `&` is optional; to deference such a pointer, `*` is optional:
 
@@ -544,7 +567,7 @@ namespace chrono {
 class Date {...};
 bool operator==(const Date&, const std::string&);
 
-}
+} // namespace chrono
 
 void f(chrono::Date d, std::string s) {
   if (d == s) {...}  // implemented in namespace Chrono
@@ -564,14 +587,14 @@ namespace mine {
 
 void f();  // declaration
 
-}
+} // namespace mine
 
 namespace mine {
 
 void f() {...}  // implementation
 void g();  // add `g()` to `Mine`
 
-}
+} // namespace mine
 
 Mine::g() {...}
 ```
@@ -583,7 +606,7 @@ namespace mine {
 
 void f();
 
-}
+} // namespace mine
 
 namespace mine_impl {
 
@@ -591,7 +614,7 @@ void f();
 void helper1();
 void helper2();
 
-}
+} // namespace mine_impl
 ```
 
 We can use alias to represent namespaces whose names are too long:
@@ -609,13 +632,13 @@ namespace A {
 class String {...};
 void f();
 
-}
+} // namespace A
 
 namespace B {
 
 using namespace A;
 
-}
+} // namespace B
 
 void g(B::String);  // this works
 void B::f() {...}   // this won't work! should use void A::f()
@@ -631,14 +654,14 @@ namespace A {
 class String {...};
 class Vector {...};
 
-}
+} // namespace A
 
 namespace B {
 
 class String {...};
 class List {...};
 
-}
+} // namespace B
 
 namespace C {
 
@@ -649,7 +672,7 @@ class List {...};
 // here we can use `Vector` in A, `String` in B, 
 // and `List` in C without stating namespaces
 
-}
+} // namespace C
 ```
 
 Namespaces can be nested. For example, inner namespaces might be the different version of the same library, in which case we can use `inline` to specify which version is used by default:
@@ -661,15 +684,15 @@ namespace v1 {
 
 void f();
 
-}
+} // namespace v1
   
 inline namespace v2 {
 
 void f();
 
-}
+} // namespace v2
 
-}
+} // namespace mine
 
 using namespace mine;
 void g() {
@@ -682,8 +705,10 @@ If we have variables and funtions that should be "global" only in the current fi
 
 ```cpp
 namespace {
-  void f() {...}
-}
+
+void f() {...}
+
+} // namespace
 
 // the unnamed namespace above is implicitly used here
 f(); // ok
@@ -754,17 +779,21 @@ Previously we tried to separate the interface from implementation by creating tw
 ```cpp
 // parser.h
 namespace parser {   // interface for the user
-  double expr(bool get);
-}
+
+double expr(bool get);
+
+} // namespace parser
 
 // parser_impl.h
 #include "parser.h"  // let the compiler check consistency
 
 namespace parser {   // interface for the implementer
-  double expr(bool get);
-  double term(bool get);
-  double expr(bool get);
-}
+
+double expr(bool get);
+double term(bool get);
+double expr(bool get);
+
+} // namespace parser
 ```
 
 There is no guaranteed order of initialization of global variables in different translation units, and we cannot catch exceptions in the translation, so we have to minimize the usage of global variables and **not** to initialize with external variables.
@@ -843,27 +872,31 @@ If a function is associated with a class, but does not need to directly access `
 
 ```cpp
 namespace chrono {
-  class Date {
-   public:
-    Date (int=0, int=0, int=0);
-   private:
-    int d, m, y;
-  };
 
-  bool operator==(const Date& a, const Date& b);
-  const Date& default_date() {  // lazy static variable
-    static Date d{1, 1, 1970};
-    return d;
-  }
+class Date {
+ public:
+  Date (int = 0, int = 0, int = 0);
 
-  // constructor should be able to see `default_date()`
-  // so it must be defined outside of the class denition
-  Date::Date(int dd, int mm, int yy) {
-    d = dd ? dd : default_date().d;
-    m = mm ? mm : default_date().m;
-    y = yy ? yy : default_date().y;
-  }
+ private:
+  int d, m, y;
+};
+
+bool operator==(const Date& a, const Date& b);
+
+const Date& default_date() {  // lazy static variable
+  static Date d{1, 1, 1970};
+  return d;
 }
+
+// constructor should be able to see `default_date()`
+// so it must be defined outside of the class denition
+Date::Date(int dd, int mm, int yy) {
+  d = dd ? dd : default_date().d;
+  m = mm ? mm : default_date().m;
+  y = yy ? yy : default_date().y;
+}
+
+} // namespace chrono
 ```
 
 ## Chapter 17 Construction, Cleanup, Copy and Move
@@ -1141,7 +1174,7 @@ class Ptr {
 
   void* operator new[](size_t);
   void operator delete[](void*, size_t);
-}
+};
 ```
 
 They are implicitly `static` so they cannot access `this`. The size to be (de)allocated is passed as a parameter, which is determined by the type of the object following `delete`, so that we don't have to store it in a variable. Note that if this class is subclassed, we should mark these operators `virtual`, otherwise if a pointer of the base type points an object of a derived type, `delete` may receive a wrong size.
@@ -1199,15 +1232,219 @@ class C1;  // ok
 namespace {
 
 class CX {
-public:
-friend class C1;
-friend class C2;
-friend class C3;
-}
-  
+ public:
+  friend class C1;
+  friend class C2;
+  friend class C3;
+};
+
 class C2;  // ok
 
 }  // namespace
 
-class C3;  // error: not a friend of CX
+class C3;  // error, not a friend of CX
+```
+
+## Chapter 20 Derived Classes
+
+For runtime polymorphism, the member function must be marked `virtual`, and the object must be manipulated through reference or pointer. Without `virtual`, we would be just **hiding** the function in the base class instead of overriding, and the virtual table won't work.
+
+In the subclass, `virtual` functions will continue to be `virtual` by nature even if we don't mark it `virtual`. We may add `override` to make it more explicit. `override` comes last in the function declaration (except for `final`), after `const`, `noexcept` or any other stuff. It is **not** needed if we are defining a member function outside of the class definition. It is preferred to add `virtual` only when the function is introduced for the first time, and always add `override` whenever overriding happens.
+
+A derived class may call functions of the base class with explicit qualification, which is no longer a virtual call, and avoids infinite recursions if the derived class is overriding a function of the base class:
+
+```cpp
+class Base {
+ public:
+  virtual void print();
+};
+
+class Derived : public Base {
+ public:
+  void print() override {
+    Base::print();  // don't call this->print() here!
+    cout << " from derived" << endl;
+  }
+};
+```
+
+We can use virtual inheritance to resolve the ambiguity when diamond inheritance exists (although we'd better get rid of diamond inheritance):
+
+```cpp
+struct A {
+  int m;
+  static int n;
+};
+
+struct B1 : public A {...};
+struct B2 : public A {...};
+struct B3 : public B1, public B2 {
+  void f() {
+    int i = m;  // error, ambiguous
+    int j = n;  // ok
+  }
+};
+
+struct C1 : public virtual A {...};
+struct C2 : public virtual A {...};
+struct C3 : public C1, public C2 {
+  void f() {
+    int i = m;  // ok
+  }
+};
+```
+
+For `B3` above, it actually holds two `m` so the compiler cannot differentiate them unless we use `B1::m` and `B2::m` within `B3`. For `C3` above, it only has one copy of `m`. The downside is, this comes with runtime performance cost since it needs to use the virtual table. Besides, if we use methods in `C2` to modify `m`, methods in `C3` may not expect the change.
+
+`final` is used to make classes and member functions cannot be overriden:
+
+```cpp
+class X {
+ public:
+  virtual void f();
+};
+
+// all virtual methods of X1 are final
+// besides, no class can inherit from X1
+class X1 final : public X {...};
+
+class X2 : public X {
+ public:
+  void f() override final;  // cannot be overriden by sublass of X2
+};
+```
+
+Using `final` may be beneficial to the performance, but we should not do this unless that properly reflects the design of class hierarchy. Just like `override`, `final` is not needed when defining a member function outside of the class definition. Neither `override` nor `final` is a keyword, but they are **contextual keywords**. We can use them as variables names, but this is highly discouraged.
+
+Constructors are not automatically inherited, since we may override some member functions that make the original constructor fail. We can use `using`-directives to make the inheritance happen:
+
+```cpp
+class Base {
+ public:
+  Base(int) {...}
+};
+
+class Derived : public Base {
+ public:
+  using Base::Base;  // we can use Derived(int) later
+};
+```
+
+When overriding functions, the return type can be relaxed. If we return a pointer (not smart pointer) or a reference to the base class, we can return its counterpart of its derived class when overriding it:
+
+```cpp
+class Expr {
+ public:
+  virtual Expr* new_expr() = 0;
+};
+
+class Cond : public Expr {
+ public:
+  Cond* new_expr() override {...}  // it does override Expr::new_expr()
+};
+
+class Add : public Expr {
+ public:
+  Add* new_expr() override {...}  // it does override Expr::new_expr()
+};
+```
+
+We cannot have virtual constructors, since constructors have a lot to do with memory management compared with ordinary functions, but we can take advantage of return type relaxation to have factory functions like the `new_expr()` above.
+
+A class with at least one pure virtual function is an abstract class. It usually does not have constructors since it cannot be instantiated. It should have a virtual destructor since it is usually used as an **interface** (*i.e.* accessed only through pointers and references), and we need to make sure the correct destructors are called. In its derived class, if not all pure virtual functions are overriden, this derived one is also an abstract class.
+
+A memebr of a class can be:
+
+- `public`: can be accessed by any function
+- `protected`: can be accessed by this class and its friends, and derived classes and their friends
+- `private`: can only be accessed by this class and its friends
+
+Note that a derived class can only access protected members of the base class from objects of its own type:
+
+```cpp
+class X {
+ protected:
+  void f();
+};
+
+class X1 : public X {...};
+
+class X2 : public X {
+  void g(X1 x1) {
+    f();     // ok
+    x1.f();  // error
+  }
+};
+```
+
+The access specifier can also be applied to the base class in the form of `class Derived : public/protected/private Base`:
+
+- `public`: every access specifier remains the same in `Derived `
+- `protected`: `public` members of `Base` become `protected` in `Derived`
+- `private`: `public` and `protected` members of `Base` become `private` in `Derived`
+
+Similar to member access control, by default, a base is `private` for classes and `public` for structs.
+
+`using`-declarations can be used in the derived class to change access control if that derived class has access to that member:
+
+```cpp
+class Base {
+ protected:
+  int a;
+
+ private:
+  int b;
+};
+
+class Derived : public Base {
+ public:
+  using Base::a;  // ok, making Base::a public
+  using Base::b;  // error, no access to Base::b
+};
+```
+
+We cannot take the address of a non-`static` memebr function, but we can use a **pointer to member** to indirectly refer to a memebr of a class:
+
+```cpp
+class Motor {
+ public:
+  virtual void start() = 0;
+  virtual void stop() = 0;
+  static void clone();
+};
+
+using Pmotor_mem = void (Motor::*)();  // pointer-to-member type
+
+void f(Motor& m) {
+  Pmotor_mem s = &Motor::start;
+  (m.*s)();           // invokes Motor::start() on m
+  Motor* pm = &m;
+  s = &Motor::stop;
+  (pm->*s)();         // invokes Motor::stop() on *pm, which is m
+  s = &Motor::clone;  // error, cannot assign an ordinary pointer
+}
+```
+
+In this way, we can store the pointer to member just like an ordinary function pointer. A usecase is that we can store this special pointer in a hash map, where the key is the name of each member function like "start" and "stop", so that we can call the correspoding member function based on an input string. Note that we cannot assign `static` member functions to it.
+
+It is like an offset into any object of type `Motor`, so it is not associated with any object of `Motor`, and it can also refer to a virtual function. It is possible to assign a member function of a base class to a pointer to member of its derived class, but not the other way around, since we can only guarantee that the derived class has all the properties of the base class.
+
+Similarily, we can also use this for member variables:
+
+```cpp
+struct X {
+  int m;
+  float n;
+};
+
+using Pval = int X::*;
+
+void f() {
+  X x;
+  Pval v = &X::m;
+  x.*v = 1;    // assigns 1 to x.m
+  X* px = &x;
+  px->*v = 2;  // assigns 2 to px->m, which is x.m
+  v = &X::n;   // error, type dismatch
+}
 ```
