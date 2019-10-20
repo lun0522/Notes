@@ -1383,7 +1383,7 @@ The access specifier can also be applied to the base class in the form of `class
 - `protected`: `public` members of `Base` become `protected` in `Derived`
 - `private`: `public` and `protected` members of `Base` become `private` in `Derived`
 
-Similar to member access control, by default, a base is `private` for classes and `public` for structs.
+Similar to member access control, by default, a base is `private` for classes and `public` for structs. `protected` and `private` inheritance can be helpful if we consider the base class as an implementation detail that should be hided, since the user of the derived class will no longer have access to `public ` methods of that base class.
 
 `using`-declarations can be used in the derived class to change access control if that derived class has access to that member:
 
@@ -1448,3 +1448,61 @@ void f() {
   v = &X::n;   // error, type dismatch
 }
 ```
+
+## Chapter 21 Class Hierarchies
+
+In multiple inheritance, if multiple base classes have members of the same name, we can qualify the member name by its class name to avoid ambiguity. A better idea is to override that member in the derived class to avoid qualifying at all:
+
+```cpp
+class B1 { public: virtual std::string debug_string(); };
+class B2 { public: virtual std::string debug_string(); };
+class D : public B1, public B2 {
+ public:
+  std::string debug_string() override {
+    return Merge(B1::debug_string(), B2::debug_string());
+  }
+};
+```
+
+If multiple base classes have members of the same name, but very different meanings, it can be hard to determine the meaning if we override it in the derived class. One solution is to introduce more intermediate classes:
+
+```cpp
+// these two draw() have totally different meanings
+class Window { public: virtual void draw(); };
+class Cowboy { public: virtual void draw(); };
+
+class WWindow : public Window {
+ public:
+  virtual void win_draw() = 0;
+  void draw() override final { win_draw(); }
+};
+
+class CCowboy : public Cowboy {
+ public:
+  virtual void cow_draw() = 0;
+  void draw() override final { cow_draw(); }
+};
+
+// now the derived class is forced to override two members respectively
+class Cowboy_window : public WWindow, public CCowboy {
+ public:
+  void win_draw() override;
+  void cow_draw() override;
+};
+```
+
+If we use a virtual base class, and the virtual base does not have a default constructor, we'll have to explicitly initialize the virtual base in the most derived class, even if intermediate classes also "initializes" the virtual base:
+
+```cpp
+struct A { A(int i); };
+struct B : public virtual A { B(int i) : A{i} {} };
+struct C : public virtual A { C(int i) : A{i} {} };
+struct D : public B, public C {
+  D(int i, int j) : B{i}, C{j} {}  // error, must initialize A
+  D(int i, int j, int k) : A{i}, B{j}, C{k} {}
+};
+```
+
+The virtual base class is considered a direct base of the most derived class. In the example above, when constructing `D`, the constructor of `A` will only be called once with `i`. How do `B` and `C` initialize `A` do not affect `D`. When an instance of `D` is destructed, the destructor of `A` will be called at last, and will only be called once.
+
+If a class without member variables is used as a virtual base class, it will be easier to cast the most derived class to the virtual base class, at the price that more space is required to support using a vritual base.
