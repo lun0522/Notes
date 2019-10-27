@@ -47,7 +47,7 @@ Local variables (excluding global, namespace, `static`, etc) of built-in types a
 int x{};  // 0
 int y;    // no well-defined value
 
-int a1[100]{};  // all elements initilized to 0
+int a1[100]{};  // all elements initialized to 0
 int a2[100];    // can be anything
 
 vector<int> v1{};
@@ -181,7 +181,7 @@ const int a = 1, b = 2;
 constexpr int c = minus(a, b);
 ```
 
-String literals are allocated on the staic memory, so:
+String literals are allocated on the static memory, so:
 
 ```cpp
 void f() {
@@ -246,9 +246,9 @@ void f() {
 
 What we overload is the first step, while the second step is done as usual. In the line `X* p = new(storage) X{3};`, `X` is used to calculate the first argument `sz`, so we only have to pass one argument of type `Arena*` to `new`, which is called placement `new`. After that, `3` is sent to the constructor.
 
-Note that we cannot use `delete` to deallocate the object since it was not allocated on the free store but by the manager, so we have to call the destructor explicitly and let the manager free the space. We can overload `delete` just like what we did to `new`, but we **cannot** call it by ourselves. It is actually used to handle the case where the constructor throws excpetions. See Wiki.
+Note that we cannot use `delete` to deallocate the object since it was not allocated on the free store but by the manager, so we have to call the destructor explicitly and let the manager free the space. We can overload `delete` just like what we did to `new`, but we **cannot** call it by ourselves. It is actually used to handle the case where the constructor throws exceptions. See Wiki.
 
-`new X{...}` will construct the object on the free store, while `X{...}` will contruct in the local scope. 
+`new X{...}` will construct the object on the free store, while `X{...}` will construct in the local scope. 
 
 To eliminate ambiguity:
 
@@ -265,7 +265,7 @@ void g() {
 }
 ```
 
-To create a `std::initializer_list`, elements between curly braces are copied (and converted to the target format if necessary) to the underlying array of `initializer_list`. It is **immutable**, and thus when we use it to initialize another object (eg: `std::vector`), elements are copied rather than moved to the new object. If we directly use a `{}`-list for constructor arguments or to initilize an aggregate, elements won't be copied (unless as by-value arguments):
+To create a `std::initializer_list`, elements between curly braces are copied (and converted to the target format if necessary) to the underlying array of `initializer_list`. It is **immutable**, and thus when we use it to initialize another object (eg: `std::vector`), elements are copied rather than moved to the new object. If we directly use a `{}`-list for constructor arguments or to initialize an aggregate, elements won't be copied (unless as by-value arguments):
 
 ```cpp
 int v1{1};     // direct initialization
@@ -327,7 +327,7 @@ func2();  // x becomes 30, but still 20 to the outside world
 func2();  // x becomes 40, but still 20 to the outside world
 ```
 
-The return type of lambda expressions can be deduced by the compiler. If a lambda does not take parameters, we can omit `()`, but if we specify a return type with `->` or declare `mutable`, `()` can not be ommited. We can specify the type of lambda as `std::function<return-type (arguments-list)>`. This is necessary for recursion, because if we use `auto`, the type of itself has not been deduced inside of its body, and thus we cannot call itself recursively. Example for recursion:
+The return type of lambda expressions can be deduced by the compiler. If a lambda does not take parameters, we can omit `()`, but if we specify a return type with `->` or declare `mutable`, `()` can not be omitted. We can specify the type of lambda as `std::function<return-type (arguments-list)>`. This is necessary for recursion, because if we use `auto`, the type of itself has not been deduced inside of its body, and thus we cannot call itself recursively. Example for recursion:
 
 ```cpp
 function<int (int, int)> gcd = [&gcd] (int a, int b) {
@@ -338,10 +338,10 @@ function<int (int, int)> gcd = [&gcd] (int a, int b) {
 
 Usage of casts (avoid explicit type conversion; always prefer `T{v}` casts and these named casts to C-style casts):
 
-- `static_cast`: conversion between related types, may be of the same class hierachy (eg: `int` -> `double`)
+- `static_cast`: conversion between related types, may be of the same class hierarchy (eg: `int` -> `double`)
 - `reinterpret_cast`: conversion between unrelated types (eg: `int` -> `char*` or `int*` -> `char*`)
 - `const_cast`: conversion between types that only differ by `const` or `volatile`
-- `dynamic_cast`: runtime checked conversion of pointers and references into a class hierachy
+- `dynamic_cast`: runtime checked conversion of pointers and references into a class hierarchy
 
 For numerical values, `T{v}` only performs well-behaved conversions. If we have to use `static_cast`, we can compare the source and resulting numbers, and reject (throw exceptions) if the difference is intolerable.
 
@@ -430,7 +430,7 @@ void f() {
 
 Note that the space for default pointer-type parameters matters. For example, `int f(char* = nullptr);` is good, while `int f(char*= nullptr)` has a syntax error because of `*=`.
 
-For function overloading, the return type is not considered for overload resolution. Overloading across class or namespace is not enabled by default (we should consider a class as a namespace here). For example, in a derived class, a method in the base class won't be considered for overload resolution. If we want that overloading happen, we have to use the `using`-directives or argument dependent lookup:
+For function overloading, the return type is not considered for overload resolution. Overloading across class or namespace is not enabled by default (we should consider a class as a namespace here). For example, in a derived class, a method in the base class won't be considered for overload resolution. If we want that overloading to happen, we have to use the `using`-directives or argument dependent lookup:
 
 ```cpp
 struct X {
@@ -469,7 +469,7 @@ void f() {
 }
 ```
 
-A pointer to function must reflect the linkage (`extern`) of it, while reflection of exception (`noexcept`) is optinal (will lose information if we omit it):
+A pointer to function must reflect the linkage (`extern`) of it, while reflection of exception (`noexcept`) is optional (will lose information if we omit it):
 
 ```cpp
 extern "C" void error(string s) noexcept {}
@@ -493,7 +493,7 @@ cout << __func__ << "() in file " << __FILE__ << " on line " << __LINE__ << endl
 
 ## Chapter 13 Exception Handling
 
-Two ways to avoid mamory leaks during exception handling:
+Two ways to avoid memory leaks during exception handling:
 
 1. **RAII**: Put the memory releasing code in the destructor. When we create local objects (or `unique_ptr`/`shared_ptr` if we need pointers), the destructor will always be called no matter the function is quitted normally or an exception is thrown. Note that this is important for constructors: if an exception is thrown inside of a constructor, objects that have been **completely** created in this constructor will be destructed automatically, and thus the caller won't have to worry about it
 
@@ -524,7 +524,7 @@ void f() {
 }
 ```
 
-When an exception is caught, we can rethrow it. Note that the type of rethrown exception can be different. In the above example, if we put `throw;` in the `catch`-block, the rethrown exception is exatly the previously caught one (of type `MyError1` or `MyError2`); but if we put `throw e;`, the type of the thrown exception will be `std::exception`.
+When an exception is caught, we can rethrow it. Note that the type of rethrown exception can be different. In the above example, if we put `throw;` in the `catch`-block, the rethrown exception is exactly the previously caught one (of type `MyError1` or `MyError2`); but if we put `throw e;`, the type of the thrown exception will be `std::exception`.
 
 `noexcept` **specifier** can be conditional. We can put an expression that evaluates to `true` or `false`:
 
@@ -559,7 +559,7 @@ To handle an exception on a different thread, use `current_exception` to transfe
 
 ## Chapter 14 Namespaces
 
-Argument-dependent lookup means when a function is called, the compiler don't just lookup the implementation of it in the current namespace, but also namespaces of its auguments:
+Argument-dependent lookup means when a function is called, the compiler doesn't just lookup the implementation of it in the current namespace, but also namespaces of its arguments:
 
 ```cpp
 namespace chrono {
@@ -644,7 +644,7 @@ void g(B::String);  // this works
 void B::f() {...}   // this won't work! should use void A::f()
 ```
 
-We can use this to extend an exisitng namespace, since everything in `A` is inherited by `B`. Note this doesn't work when we are to define something.
+We can use this to extend an exisiting namespace, since everything in `A` is inherited by `B`. Note this doesn't work when we are to define something.
 
 Use both `using`-**directives** (use the entire namespace) and `using`-**declarations** (use something within a namespace) to avoid name clashes:
 
@@ -819,7 +819,7 @@ Throwing exceptions ensures destructors of local objects are called, so it is pr
 
 Copy constructor (eg: `X x{y};`) and assignment (eg: `X x = y;`) are provided by default (memberwise copy). Move constructor and assignment are also provided as memberwise move.
 
-Use `explicit` to avoid implicit conversion, especially for signle-argument constructors:
+Use `explicit` to avoid implicit conversion, especially for single-argument constructors:
 
 ```cpp
 class X {
@@ -841,7 +841,7 @@ The member function defined within the class definition is implicitly inlined. I
 
 If a member variable is marked `mutable`, it can be modified even if it is in a `const` object. Another way is to store a pointer to that variable, so that its mutability is independent of the object.
 
-`static` member variables must be declared within the definition of the class and then defined somewhere else even if it is marked `private`, **unless** their are `const` integral or enumeration types, or `constexpr` literal types:
+`static` member variables must be declared within the definition of the class and then defined somewhere else even if it is marked `private`, **unless** they are `const` integral or enumeration types, or `constexpr` literal types:
 
 ```cpp
 class Date {
@@ -939,13 +939,13 @@ void f() {
 
 A default memberwise constructor is provided unless some members are `const` or references. If we define a custom constructor that requires arguments, the default one will disappear, but the default assignment and copy constructors still exist.
 
-Containers are able to use elements in initilizer lists to construct their content:
+Containers are able to use elements in initializer lists to construct their content:
 
 ```cpp
 struct X { X(string); };
 
 void f() {
-  X a1[10];  // error, cannot initlize
+  X a1[10];  // error, cannot initialize
   X a2[] {string{"alpha"}, string{"beta"}};  // constructs two elements
   vector<X> v1;  // fine, no element
   vector<X> v2{string{"alpha"}, string{"beta"}};  // constructs two elements
@@ -1113,7 +1113,7 @@ struct X {
 
 void f() {
   X x{true};
-  if (x)         // ok. contextual convertion
+  if (x)         // ok. contextual conversion
     bool b = x;  // error
 }
 ```
@@ -1200,7 +1200,7 @@ void f() {
 There are four kinds of literals that can be defined:
 
 - Integer literal (taking `unsigned long long` or `const char*`)
-- Floating-point litral (taking `long double` or `const char*`)
+- Floating-point literal (taking `long double` or `const char*`)
 - String literal (taking a <`const char*`, `size_t`> pair)
 - Character literal (taking `char`, `wchar_t`, `char16_t` or `char32_t`)
 
@@ -1224,7 +1224,7 @@ class List {
 };
 ```
 
-A friend function/class must be declared before the class to which they are friend, or in the same enclosing namspace:
+A friend function/class must be declared before the class to which they are friend, or in the same enclosing namespace:
 
 ```cpp
 class C1;  // ok
@@ -1296,7 +1296,7 @@ struct C3 : public C1, public C2 {
 
 For `B3` above, it actually holds two `m` so the compiler cannot differentiate them unless we use `B1::m` and `B2::m` within `B3`. For `C3` above, it only has one copy of `m`. The downside is, this comes with runtime performance cost since it needs to use the virtual table. Besides, if we use methods in `C2` to modify `m`, methods in `C3` may not expect the change.
 
-`final` is used to make classes and member functions cannot be overriden:
+`final` is used to make classes and member functions cannot be overridden:
 
 ```cpp
 class X {
@@ -1310,7 +1310,7 @@ class X1 final : public X {...};
 
 class X2 : public X {
  public:
-  void f() override final;  // cannot be overriden by sublass of X2
+  void f() override final;  // cannot be overridden by subclass of X2
 };
 ```
 
@@ -1351,9 +1351,9 @@ class Add : public Expr {
 
 We cannot have virtual constructors, since constructors have a lot to do with memory management compared with ordinary functions, but we can take advantage of return type relaxation to have factory functions like the `new_expr()` above.
 
-A class with at least one pure virtual function is an abstract class. It usually does not have constructors since it cannot be instantiated. It should have a virtual destructor since it is usually used as an **interface** (*i.e.* accessed only through pointers and references), and we need to make sure the correct destructors are called. In its derived class, if not all pure virtual functions are overriden, this derived one is also an abstract class.
+A class with at least one pure virtual function is an abstract class. It usually does not have constructors since it cannot be instantiated. It should have a virtual destructor since it is usually used as an **interface** (*i.e.* accessed only through pointers and references), and we need to make sure the correct destructors are called. In its derived class, if not all pure virtual functions are overridden, this derived one is also an abstract class.
 
-A memebr of a class can be:
+A member of a class can be:
 
 - `public`: can be accessed by any function
 - `protected`: can be accessed by this class and its friends, and derived classes and their friends
@@ -1403,7 +1403,7 @@ class Derived : public Base {
 };
 ```
 
-We cannot take the address of a non-`static` memebr function, but we can use a **pointer to member** to indirectly refer to a memebr of a class:
+We cannot take the address of a non-`static` member function, but we can use a **pointer to member** to indirectly refer to a member of a class:
 
 ```cpp
 class Motor {
@@ -1425,11 +1425,11 @@ void f(Motor& m) {
 }
 ```
 
-In this way, we can store the pointer to member just like an ordinary function pointer. A usecase is that we can store this special pointer in a hash map, where the key is the name of each member function like "start" and "stop", so that we can call the correspoding member function based on an input string. Note that we cannot assign `static` member functions to it.
+In this way, we can store the pointer to member just like an ordinary function pointer. A usecase is that we can store this special pointer in a hash map, where the key is the name of each member function like "start" and "stop", so that we can call the corresponding member function based on an input string. Note that we cannot assign `static` member functions to it.
 
 It is like an offset into any object of type `Motor`, so it is not associated with any object of `Motor`, and it can also refer to a virtual function. It is possible to assign a member function of a base class to a pointer to member of its derived class, but not the other way around, since we can only guarantee that the derived class has all the properties of the base class.
 
-Similarily, we can also use this for member variables:
+Similarly, we can also use this for member variables:
 
 ```cpp
 struct X {
@@ -1445,7 +1445,7 @@ void f() {
   x.*v = 1;    // assigns 1 to x.m
   X* px = &x;
   px->*v = 2;  // assigns 2 to px->m, which is x.m
-  v = &X::n;   // error, type dismatch
+  v = &X::n;   // error, type mismatch
 }
 ```
 
@@ -1505,4 +1505,97 @@ struct D : public B, public C {
 
 The virtual base class is considered a direct base of the most derived class. In the example above, when constructing `D`, the constructor of `A` will only be called once with `i`. How do `B` and `C` initialize `A` do not affect `D`. When an instance of `D` is destructed, the destructor of `A` will be called at last, and will only be called once.
 
-If a class without member variables is used as a virtual base class, it will be easier to cast the most derived class to the virtual base class, at the price that more space is required to support using a vritual base.
+If a class without member variables is used as a virtual base class, it will be easier to cast the most derived class to the virtual base class, at the price that more space is required to support using a virtual base.
+
+## Chapter 22 Run-Time Type Information (RTTI)
+
+Casting from...
+
+- base class to derived: **downcast**
+- derived class to base: **upcast**
+- base class to sibling: **crosscast**
+
+`private` and `protected` bases are protected when upcasting:
+
+```cpp
+class C : public A, protected B {...};
+
+void f (C* c) {
+  B* b1 = c;  // error, B is protected base
+  B* b2 = dynamic_cast<B*>(c);  // error
+}
+```
+
+When doing downcasting or crosscasting, the source type must be **polymorphic** (has virtual functions), in which case the type information can be stored with its virtual table.
+
+The target type of `dynamic_cast` does not need to be polymorphic in any case. Casting to `void*` can help find the starting address of an object of polymorphic type, however, there is no way to `dynamic_cast` a `void*` to other types, since there is no way to find its virtual table.
+
+Note that ambiguity can make `dynamic_cast` fail. For example, if we have such a class hierarchy:
+
+```
+Storable (virtual base)
+      ^       ^
+     /         \
+Component   Component
+    ^           ^
+    |           |
+Receiver   Transmitter
+    ^           ^
+     \         /
+ Radio (most derived)
+```
+
+If the actual type of an object is `Radio`, downcasting a `Storable*` to `Component*` will lead to ambiguity, hence `nullptr` will be returned. This cannot be detected at compile time. It will happen only if `Storable` is a `virtual` base. If it is not, we won't be able to assign a `Radio*` to `Storable*` at all because of ambiguity, which should be detected at compile time.
+
+`static_cast` doesn't do runtime checks. We can cast `void*` to other types with it, which is not allowed if using `dynamic_cast`. Both of these two casts preserve constness and access controls, so we cannot cast to a private base even if using `static_cast`.
+
+Calling virtual functions also reflects the class hirerachy. If we construct a `Radio`, and call a virtual function in the constructor of `Component`, either the `Storable` or `Component` version of this function will be called, rather than any other derived classes. The same goes for destruction. We should not try to be smart here, and we should avoid to call virtual function during construction and destruction.
+
+`typeid()` returns an instance of `std::type_info` associated with the operand. If the operand is a pointer or a reference to a **polymorhic** type with value `nullptr`, or an expression that evaluates to `nullptr`, `std::bad_typeid` will be thrown. If the operand is a dereferenced pointer or reference to a **polymorhic** type, `typeid()` will return the most derived type of the operand at runtime. Otherwise, the type will be evaluated at compile time. `std::type_info` has following methods:
+
+- `before()`, so that it can be put in an ordered container. Note that the returned value of it has nothing to do with inheritance relationships.
+- `==` for comparison between `std::type_id`s. It is **not** guaranteed that there is is only one instance of `std::type_id` for each type, so we cannot directly compare addresses.
+- `name()` returns a diagnostic string, whose content is implementation-defined.
+- `hash_code()`, so that it can be used as the key of a hashmap. However, since `std::type_info` is not copyable, we can only use a pointer to it as the key. An easier way is to use its simple wrapper, `std::type_index`.
+
+When we need to determine which member function to call based on types of two arguments, we may use the double dispatch trick:
+
+```cpp
+class Circle;
+class Triangle;
+
+class Shape {
+ public:
+  virtual bool intersect(const Shape&) const = 0;
+  virtual bool intersect(const Circle&) const = 0;
+  virtual bool intersect(const Triangle&) const = 0;
+}
+
+bool Circle::intersect(const Shape& s) const { return s.intersect(*this); }
+bool Triangle::intersect(const Shape& s) const { return s.intersect(*this); }
+```
+
+The problem of this approach is that when a new subclass is added, we will need to modify the definition of every class. One partial workaround is to use the visitor pattern:
+
+```cpp
+class CircleVisitor;
+class TriangleVisitor;
+
+class Shape {
+ public:
+  virtual void accept(Visitor&) = 0;
+}
+
+void Circle::accept(Visitor& v) { v.accept(*this); }
+void Triangle::accept(Visitor& v) { v.accept(*this); }
+
+class Visitor {
+ public:
+  virtual void accept(Circle&) = 0;
+  virtual void accept(Triangle&) = 0;
+};
+
+// for example, CircleVisitor::accept(Triangle&) will compute circle-triangle intersection
+```
+
+In this case, when new classes are added, we will extend methods of visitors instead. One alternative is to find some common properties, for example, we may use bounding boxes for computing intersection, instead of using other properties that are only held by one subclass. Another alternative is to use a hashmap, where the key is a pair of `std::type_index`s of two `Shape`s, and the value is the corresponding handler.
