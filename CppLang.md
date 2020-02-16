@@ -131,9 +131,10 @@ To optimize the memory usage of `struct`, we can reorder elements in it to reduc
 
 Prefer `enum class` to plain `enum`:
 
-- We can specify the underlying data type: `enum class Color : char { red, green, blue };`
-- Enumerators are in the scope (namespace) of `enum class`, so we cannot directly use `red`, but `Color::red`
-- Enumerators cannot be implicitly converted to other types (eg: `int`) unless we use `static_cast`
+- Enumerators are in the scope (namespace) of `enum class`, so we cannot directly use `red`, but `Color::red`.
+- Enumerators cannot be implicitly converted to other types (eg: `int`) unless we use `static_cast`.
+- We can specify the underlying data type: `enum class Color : char { red, green, blue };`. If not specified, it will be `int` by default.
+- It can be forward-declared since its underlying data type is known. The data type of plain `enum` depends on enumerators in it, hence it cannot be forward-declared.
 
 ## Chapter 9 Statements
 
@@ -851,6 +852,7 @@ class Date {
     m = mm ? mm : default_date.m;
     y = yy ? yy : default_date.y;
   }
+
  private:
   int d, m, y;
   static const int x1 = 1;      // fine
@@ -1599,3 +1601,136 @@ class Visitor {
 ```
 
 In this case, when new classes are added, we will extend methods of visitors instead. One alternative is to find some common properties, for example, we may use bounding boxes for computing intersection, instead of using other properties that are only held by one subclass. Another alternative is to use a hashmap, where the key is a pair of `std::type_index`s of two `Shape`s, and the value is the corresponding handler.
+
+## Chapter 23 Templates
+
+A member template cannot be `virtual`, otherwise, the implementation of virtual table and linker will be very complictaed.
+
+If the types of template parameters are deduced, we don't apply promotions and standard conversions. If there is ambiguity, we need to explicitly specify the parameter type:
+
+```cpp
+template <typename T>
+T max(T, T);
+
+void f() {
+  max(2.7, 4);  // error, max<double> or max<int>?
+  max<double>(2.7, 4);  // ok
+}
+```
+
+Nested classes should be avoided if they don't use all template parameters of the enclosing class:
+
+```cpp
+template <typename T, typename Allocator>
+struct List {
+  struct Iterator {
+    T* current_position;
+  };
+
+  Iterator begin();
+  Iterator end();
+};
+```
+
+In the above example, `List::Iterator` does not use the template parameter `Allocator`, but whenever we want to use the iterator, we still need to specify `A`:
+
+```cpp
+void f(List<int, AllocatorA>::Iterator iter1,
+       List<int, AllocatorA>::Iterator iter2);
+
+void g(List<int, AllocatorA>& list1,
+       List<int, AllocatorB>& list2) {
+  f(list1.begin(), list1.end());  // ok
+  f(list2.begin(), list2.end());  // error
+}
+```
+
+The solution is to make `Iterator` a separate class:
+
+```cpp
+template <typename T>
+struct Iterator {
+  T* current_position;
+};
+
+template <typename T, typename Allocator>
+struct List {
+  Iterator<T> begin();
+  Iterator<T> end();
+};
+```
+
+To declare a function friend of a template class, we need to add `<>` to state that this friend is templated. We can also make a friend declaration template:
+
+```cpp
+template <typename T>
+class Link {
+  friend void f<>(const Link& link);
+};
+
+template <typename T>
+void f(const Link<T>& link);
+
+class List {
+  template <typename T>
+  friend class Link;
+};
+```
+
+Class template parameters are never deduced, but we can call a function that does the deduction. One example is `std::make_pair`.
+
+Resolution of overloaded ordinary functions and template functions:
+
+1. Consider the most specialized template function.
+2. If a template parameter is deduced, don't consider any further promotions, standard conversions or user-defined conversion. Note that if some arguments do not need type deduction at all, we still allow promotions/conversions for them.
+3. If an orinary function and a template function are equally good matches, prefer the ordinary one.
+4. If there is still a tie, the function call is an error.
+
+Examples:
+
+```cpp
+// version A
+template<typename T>
+T sqrt(T);
+
+// version B
+template<typename T>
+complex<T> sqrt(complex<T>);
+
+// version C
+double sqrt(double);
+
+void f(complex<double> z) {
+  sqrt(z);  // invokes version B rather than A because of (1)
+  sqrt(2);  // invokes version A rather than C because of (2)
+  sqrt(2.0);  // invokes version C rather than A because of (3)
+}
+```
+
+Note that during resolution, we only consider the declaration of template functions (*i.e.* the deifinition is **not** considered yet), so it is possible that we have a template that can be instantiated and one cannot, and we still get a compile error because the winner of resolution is the latter.
+
+The template argument name is only accessible to the templated class itself. To make it accessible for other classes, we need to provide an alias:
+
+```cpp
+template <typename T>
+class Container {
+ public:
+  using value_type = T;
+}
+```
+
+We can also define alias for partially specialized templates:
+
+```cpp
+template <typename T, typename Allocator>
+class Vector {
+ public:
+  using value_type = T;
+};
+
+template <typename T>
+using MyVec = Vector<T, MyAlloc>;
+
+template <typename T>
+using ValType = typename Vector<T, MyAlloc>::value_type;
+```
