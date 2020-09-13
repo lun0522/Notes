@@ -328,6 +328,15 @@ func2();  // x becomes 30, but still 20 to the outside world
 func2();  // x becomes 40, but still 20 to the outside world
 ```
 
+A lambda without capturing can be converted to function pointer, since it is equivalent to a static function:
+
+```cpp
+using Cmp = bool(*)(int);
+int x = 1;
+Cmp cmp1 = [x](int val) { return val < x };  // error
+Cmp cmp2 = [](int val) { return val < 1; };
+```
+
 The return type of lambda expressions can be deduced by the compiler. If a lambda does not take parameters, we can omit `()`, but if we specify a return type with `->` or declare `mutable`, `()` can not be omitted. We can specify the type of lambda as `std::function<return-type (arguments-list)>`. This is necessary for recursion, because if we use `auto`, the type of itself has not been deduced inside of its body, and thus we cannot call itself recursively. Example for recursion:
 
 ```cpp
@@ -1733,4 +1742,153 @@ using MyVec = Vector<T, MyAlloc>;
 
 template <typename T>
 using ValType = typename Vector<T, MyAlloc>::value_type;
+```
+
+## Chapter 25 Specialization
+
+Values can be used as template parameters. They are designed to pass integers and pointers to functions. It is possible to pass something else, but not encouraged. We can use a **type** template parameter as the type of the later **value** template parameter:
+
+```cpp
+template<typename T, T default_value = T{}>
+class Vec {...};
+
+void f() {
+  Vec<int> vec1;  // default_value is 0
+  Vec<string> vec2;  // default_value is ""
+}
+```
+
+Passing policy classes as template parameters is widely used for:
+
+- Actions for algorithms like `sort()`
+- Allocators and comparators of containers
+- Deleters for `unique_ptr`
+
+For example, for an ordered map, instead of requiring the key class to have a comparator, or taking a function pointer to a comparator function, we can pass a comparator class as template parameter, and use the most common comparator, `std::less`, as the default type:
+
+```cpp
+template <typename Key, typename Value, typename Compare = std::less<Key>>
+class Map {
+ public:
+  explicit Map(Compare c = {}) : cmp{c} {}
+
+ private:
+  Compare cmp;
+};
+
+int cmp(int a, int b);
+
+void f() {
+  Map<int, string> map1;  // use default constructed std::less<int>
+
+  Map<int, string, int(*)(int, int)> map2{cmp};  // use cmp()
+  Map<int, string, decltype(&cmp)> map3{cmp};  // same as previous one
+
+  MyCompare my_cmp{"argument"};
+  Map<int, string, MyCompare> map4{my_cmp};  // comparator is stateful
+}
+```
+
+The default type won't be evaluated until we actually use it, so if we have `Map<MyType, string, MyCompare> map4`, and if `std::less<MyType>` does not compile, there won't be any error. Also note that since we cannot convert a lambda with non-empty capture list to function pointer, we can store the lambda as a variable, and use `decltype()` to pass its type:
+
+```cpp
+int x = 10;
+auto cmp = [x](int, int) -> bool {...};
+Map<int, std::string, decltype(cmp)> map{cmp};
+``` 
+
+We can also use **class** templates as template parameters, if we really need to use variants of one template parameter to instantiate another template parameter:
+
+```cpp
+template <typename Entry, template<typename> class Container>
+class Xref {
+  Container<Entry> entries;
+  Container<Entry*> references;
+};
+
+class X {...};
+
+template <typename T>
+using MyVector = std::vector<T>;
+
+template <typename T>
+class MyContainer {...};
+
+void f() {
+  Xref<X, MyVector> xref1;  // uses MyVector<X> and MyVector<X*>
+  Xref<X, MyContainer> xref2;  // uses MyContainer<X> and MyContainer<X*>
+}
+```
+
+A specification with a **pattern** containing a template parameter is called a **partial specification**. For example:
+
+```cpp
+template <typename T>
+class Vector {...};
+
+template <typename T>
+class Vector<T*> {...};
+```
+
+For `Vector<X>`, if `X` is a pointer type, such as `char*` and `int**`, we will be using the second definition of `Vector`. If `Vector` is used with multiple pointer types, the compiler will generate member functions for each of them, which can lead to code size bloat. If those member functions can actually be shared among pointer types, one way to reduce instruction size is to have one class for pointer types, and another class for non-pointer types. However, the users need to make sure they are using the correct class in that case. Another way is to take advantage of partial specification:
+
+```cpp
+template<>
+class Vector<void*> {...};
+
+template <typename T>
+class Vector<T*> : private Vector<void*> {...};
+```
+
+`Vector<void*>` is a **complete specification**. In this class, we can implement the common member functions for all `Vector<X>` where `X` is a pointer type, and then use `Vector<T*>` to bridge them to `Vector<T>`, so that the user can still use one universal interface for all types.
+
+We can also only specify a subset of template parameters (note that specifications can have different members):
+
+```cpp
+template<typename T, int N>
+class Matrix;
+
+template<typename T>
+class Matrix<T, 1> {
+  T* elem;
+  int size;
+};
+
+template<typename T>
+class Matrix<T, 2> {
+  T* elem;
+  int dim1;
+  int dim2;
+};
+```
+
+The most general template is called the **primary template**. It must come before any specification, and it serves as the interface of all specifications. Note that if we don't intend to instantiate the primary template, we don't need to define it, but only declare it.
+
+The spec doesn't prevent us from re-defining the template with a given set of parameters, like defining `class Matrix<T, 1>` multiple times in different parts of the program. However, that is breaking the type system since objects of the "same" type would have different versions, so we shouldn't do so.
+
+We have to be careful about pointer types, for example, when we are comparing two variables, if they are pointers, we might actually want to compare the values being pointed to:
+
+```cpp
+template <typename T>
+bool less(T a, T b) {
+  return a < b;
+}
+
+template <>
+bool less<const char*>(const char* a, const char* b) {
+  return strcmp(a, b) < 0;
+}
+```
+
+Since `const char*` can be deduced from argument types, we can simplify it to:
+
+```cpp
+template<>
+bool less<>(const char* a, const char* b) {...}
+```
+
+Furthermore, we can actually omit the template part, since during overload resolution, this version is preferred over the templated versions:
+
+```cpp
+bool less(const char* a, const char* b) {...}
 ```
